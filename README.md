@@ -4,6 +4,9 @@
 - XML
 - Custom
 
+
+## Warning, below are just wild thoughts, nothing concrete
+
 Thinking of a declaration to be able to parse simple data files.
 
 struct state
