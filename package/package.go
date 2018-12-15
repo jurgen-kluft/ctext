@@ -4,6 +4,7 @@ import (
 	"github.com/jurgen-kluft/xbase/package"
 	"github.com/jurgen-kluft/xcode/denv"
 	"github.com/jurgen-kluft/xentry/package"
+	"github.com/jurgen-kluft/xstring/package"
 	"github.com/jurgen-kluft/xunittest/package"
 )
 
@@ -13,22 +14,24 @@ func GetPackage() *denv.Package {
 	xunittestpkg := xunittest.GetPackage()
 	xentrypkg := xentry.GetPackage()
 	xbasepkg := xbase.GetPackage()
+	xstringpkg := xstring.GetPackage()
 
 	// The main (xtext) package
 	mainpkg := denv.NewPackage("xtext")
 	mainpkg.AddPackage(xunittestpkg)
 	mainpkg.AddPackage(xentrypkg)
 	mainpkg.AddPackage(xbasepkg)
+	mainpkg.AddPackage(xstringpkg)
 
 	// 'xtext' library
 	mainlib := denv.SetupDefaultCppLibProject("xtext", "github.com\\jurgen-kluft\\xtext")
 	mainlib.Dependencies = append(mainlib.Dependencies, xbasepkg.GetMainLib())
+	mainlib.Dependencies = append(mainlib.Dependencies, xstringpkg.GetMainLib())
 
 	// 'xtext' unittest project
 	maintest := denv.SetupDefaultCppTestProject("xtext_test", "github.com\\jurgen-kluft\\xtext")
 	maintest.Dependencies = append(maintest.Dependencies, xunittestpkg.GetMainLib())
 	maintest.Dependencies = append(maintest.Dependencies, xentrypkg.GetMainLib())
-	maintest.Dependencies = append(maintest.Dependencies, xbasepkg.GetMainLib())
 	maintest.Dependencies = append(maintest.Dependencies, mainlib)
 
 	mainpkg.AddMainLib(mainlib)

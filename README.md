@@ -4,7 +4,6 @@
 - XML
 - Custom
 
-
 It will also consider BOM:
 
 Bytes       | Utf    | Endian
@@ -15,11 +14,11 @@ FE FF       | UTF-16 | big-endian
 FF FE       | UTF-16 | little-endian
 EF BB BF    | UTF-8  | na
 
-
 ## Warning, below are just wild thoughts, nothing concrete
 
 Thinking of a declaration to be able to parse simple data files.
 
+```c++
 struct state
 {
     u32         line;
@@ -38,7 +37,7 @@ struct item
         // Character conversion
         p.convert('.', '0');
         p.convert('#', '1');
-        
+
         // Counters
         p.counter("0", &s.chr);
         p.counter("1", &s.chr);
@@ -65,9 +64,9 @@ struct item
         //
         // Then we get here on '/', '/', ' => ' etc...
         // Basically whenever our state is changing.
-        // 
-
+        //
 
     }
 
 };
+```

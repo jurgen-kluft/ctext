@@ -7,5 +7,5 @@ import (
 
 func main() {
 	xcode.Init()
-	xcode.Generate(xcrypto.GetPackage())
+	xcode.Generate(xtext.GetPackage())
 }
