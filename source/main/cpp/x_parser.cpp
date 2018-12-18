@@ -150,7 +150,7 @@ namespace xcore
             }
 
             bool Enclosed::Check(Characters& _Stream) { return (Filters::Exact(m_open) + _Tokenizer + Filters::Exact(m_close)).Check(_Stream); }
-        }
+        } // namespace Manipulators
 
         namespace Filters
         {
@@ -256,26 +256,26 @@ namespace xcore
 
             bool Integer::Check(Characters& _Stream)
             {
-                s32        integer      = 0;
-                Characters _InputCursor = _Stream;
-                uchar32    c            = _InputCursor.Peek();
-                bool       is_negative  = c == '-';
+                s32        value       = 0;
+                Characters input       = _Stream;
+                uchar32    c           = input.Peek();
+                bool       is_negative = c == '-';
                 if (is_negative)
-                    _InputCursor.Skip();
-                while (_InputCursor.Valid())
+                    input.Skip();
+                while (input.Valid())
                 {
-                    c = _InputCursor.Peek();
+                    c = input.Peek();
                     if (!utf32::is_digit(c))
                         break;
-                    integer = (integer * 10) + utf32::to_digit(c);
+                    value = (value * 10) + utf32::to_digit(c);
                 }
-                if (_InputCursor == _Stream)
+                if (input == _Stream)
                     return false;
                 if (is_negative)
-                    integer = -integer;
-                if (integer >= _Min && integer <= _Max)
+                    value = -value;
+                if (value >= _Min && value <= _Max)
                 {
-                    _Stream = _InputCursor;
+                    _Stream = input;
                     return true;
                 }
                 return false;
@@ -283,64 +283,77 @@ namespace xcore
 
             bool Float::Check(Characters& _Stream)
             {
-                Characters temp = _Stream;
-                if (!temp.Valid())
-                    return false;
-                float ret;
-                // float ret = STRTOF(temp, (Char**)&temp);
-                if (temp == _Stream)
-                    return false;
-                if (ret >= _Min && ret <= _Max)
+                f32        value       = 0.0f;
+                Characters input       = _Stream;
+                uchar32    c           = input.Peek();
+                bool       is_negative = c == '-';
+                if (is_negative)
+                    input.Skip();
+                while (input.Valid())
                 {
-                    _Stream = temp;
+                    c = input.Peek();
+                    if (!utf32::is_digit(c))
+                        break;
+                    value = (value * 10) + utf32::to_digit(c);
+                }
+                if (c == '.')
+                {
+                    input.Skip();
+                    f32 mantissa = 10.0f;
+                    while (input.Valid())
+                    {
+                        c = input.Peek();
+                        if (!utf32::is_digit(c))
+                            break;
+                        value = value + f32(utf32::to_digit(c)) / mantissa;
+                        mantissa *= 10.0f;
+                    }
+                }
+                if (input == _Stream)
+                    return false;
+                if (is_negative)
+                    value = -value;
+                if (value >= _Min && value <= _Max)
+                {
+                    _Stream = input;
                     return true;
                 }
                 return false;
             }
-        }
+        } // namespace Filters
 
         namespace Utils
         {
-
-            bool IPv4::Check(Characters& _Stream)
-            {
-                return (3 * ((Within(1, 3, DIGIT) & Integer(255)) + Is(('.'))) + (Within(1, 3, DIGIT) & Filters::Integer(255))).Check(_Stream);
-            }
-            /*********************************************************************************/
+            bool IPv4::Check(Characters& _Stream) { return (3 * ((Within(1, 3, DIGIT) & Integer(255)) + Is(('.'))) + (Within(1, 3, DIGIT) & Filters::Integer(255))).Check(_Stream); }
 
             bool Host::Check(Characters& _Stream)
             {
-                return (IPV4 | (OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)) +
-                                ZeroOrMore(Is(('.')) + OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)))))
+                return (IPV4 |
+                        (OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)) + ZeroOrMore(Is(('.')) + OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)))))
                     .Check(_Stream);
             }
-            /*********************************************************************************/
 
             bool Email::Check(Characters& _Stream)
             {
                 return (OneOrMore(ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))) + ZeroOrMore(Is('.') + (ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-")))) + Is('@') + HOST).Check(_Stream);
             }
-            /*********************************************************************************/
 
             bool Phone::Check(Characters& _Stream)
             {
-                return (ZeroOrMore(Is(('+'))) + (ZeroOrMore(Is(('(')) + OneOrMore(DIGIT) + Is((')'))) + ZeroOrMore(WHITESPACE)) + OneOrMore(DIGIT) +
-                        ZeroOrMore(In((" -")) + OneOrMore(DIGIT)))
+                return (ZeroOrMore(Is(('+'))) + (ZeroOrMore(Is(('(')) + OneOrMore(DIGIT) + Is((')'))) + ZeroOrMore(WHITESPACE)) + OneOrMore(DIGIT) + ZeroOrMore(In((" -")) + OneOrMore(DIGIT)))
                     .Check(_Stream);
             }
-
-            /*********************************************************************************/
 
             bool ServerAddress::Check(Characters& _Stream) { return (HOST + ZeroOrOne(Is((':')) + Integer(1, 65535))).Check(_Stream); }
-            /*********************************************************************************/
+
             bool Uri::Check(Characters& _Stream)
             {
-                return (OneOrMore(ALPHANUMERIC) + Is((':')) +
-                        (OneOrMore(ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))) + ZeroOrMore(Is('.') + (ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))))) + Is(('@')) + SERVERADDRESS)
+                return (OneOrMore(ALPHANUMERIC) + Is((':')) + (OneOrMore(ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))) + ZeroOrMore(Is('.') + (ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))))) + Is(('@')) +
+                        SERVERADDRESS)
                     .Check(_Stream);
             }
-        }
-    }
+        } // namespace Utils
+    }     // namespace xparser
 
     using namespace xcore::xparser;
 
@@ -358,7 +371,7 @@ namespace xcore
         Characters _Start  = _Cursor;
         bool       _Result = tok.Check(_Cursor);
         if (_Result)
-            _LastTokenized = xparser::Characters(_Start, _Cursor);
+            _LastTokenized = Characters(_Start, _Cursor);
         return _Result;
     }
 
@@ -376,24 +389,11 @@ namespace xcore
         return Characters();
     }
 
-    int StringProcessor::GetLastParserPosition() { return ((int)(_Cursor - _String)); }
-
-    void StringProcessor::Push() { _SavedPositions.push(_Cursor); }
-
-    void StringProcessor::Pop()
-    {
-        if (!_SavedPositions.empty())
-        {
-            _Cursor = _SavedPositions.top();
-            _SavedPositions.pop();
-        }
-    }
-
-    bool StringProcessor::IsEOT() { return ((*_Cursor) == ('\0')); }
+    bool StringProcessor::IsEOT() { return (_Cursor.Peek() == ('\0')); }
 
     void StringProcessor::Reset()
     {
         _LastTokenized = Characters();
         _Cursor        = _String;
     }
-}
+} // namespace xcore
