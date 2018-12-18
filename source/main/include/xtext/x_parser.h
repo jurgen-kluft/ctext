@@ -5,41 +5,195 @@
 #pragma once
 #endif
 
-//#define USE_WCHAR
-#if defined     USE_WCHAR
-typedef wchar_t Char;
-#define _C(__x) L##__x
-#define STRCAT wcsncat
-#define STRTOF wcstof
-#define STRTOL wcstol
-#define STRCHR wcschr
-#define STDSTRING std::wstring
-#else
-typedef char Char;
-#define _C(__x) __x
-#define STRCAT strncat
-#define STRTOF strtof
-#define STRTOL strtol
-#define STRCHR strchr
-#define STDSTRING std::string
-#endif
+#include "xbase/x_runes.h"
 
-#if defined PLATFORM_PC
-#define END_OF_LINE _C("\r\n")
-#pragma warning(disable : 4251)
-#else
-#define END_OF_LINE _C("\n")
-#endif
-
-namespace xparser
+namespace xcore
 {
-    namespace Rules
+    namespace xparser
     {
+        class CharactersOut
+        {
+            struct charptr
+            {
+                union {
+                    void*        _any;
+                    char*        _ascii;
+                    utf8::rune*  _utf8;
+                    utf16::rune* _utf16;
+                    utf32::rune* _utf32;
+                };
+                charptr(char* str)
+                    : _ascii(str)
+                {
+                }
+            };
+            class etype
+            {
+            public:
+                enum
+                {
+                    ASCII = 0,
+                    UTF8  = 1,
+                    UTF16 = 2,
+                    UTF32 = 4
+                };
+                s32 type;
+                etype()
+                    : type(ASCII)
+                {
+                }
+                etype(s32 t)
+                    : type(t)
+                {
+                }
+                etype(const etype& t)
+                    : type(t.type)
+                {
+                }
+                bool operator==(const etype& t) const { return t.type == type; }
+                bool operator!=(const etype& t) const { return t.type != type; }
+            };
+            etype   m_type;
+            charptr m_str;
+            charptr m_cur;
+            charptr m_end;
+        };
+
+        class Characters
+        {
+            struct charptr
+            {
+                union {
+                    void const*        _any;
+                    const char*        _ascii;
+                    const utf8::rune*  _utf8;
+                    const utf16::rune* _utf16;
+                    const utf32::rune* _utf32;
+                };
+                charptr(const char* str)
+                    : _ascii(str)
+                {
+                }
+            };
+            class etype
+            {
+            public:
+                enum
+                {
+                    NONE  = -1,
+                    ASCII = 0,
+                    UTF8  = 1,
+                    UTF16 = 2,
+                    UTF32 = 4
+                };
+                s32 type;
+                etype()
+                    : type(ASCII)
+                {
+                }
+                etype(s32 t)
+                    : type(t)
+                {
+                }
+                etype(const etype& t)
+                    : type(t.type)
+                {
+                }
+                bool operator==(const etype& t) const { return t.type == type; }
+                bool operator!=(const etype& t) const { return t.type != type; }
+            };
+            etype          m_type;
+            charptr        m_str;
+            charptr        m_cur;
+            charptr        m_end;
+            inline uchar32 peek_ascii() const { return (m_cur._ascii != nullptr && m_cur._ascii < m_end._ascii) ? *m_cur._ascii : '\0'; }
+            inline uchar32 peek_utf32() const { return (m_cur._utf32 != nullptr && m_cur._utf32 < m_end._utf32) ? *m_cur._utf32 : '\0'; }
+
+            inline uchar32 read_ascii() { return (m_cur._ascii != nullptr && m_cur._ascii < m_end._ascii) ? *m_cur._ascii++ : '\0'; }
+            inline uchar32 read_utf32() { return (m_cur._utf32 != nullptr && m_cur._utf32 < m_end._utf32) ? *m_cur._utf32++ : '\0'; }
+
+        public:
+            Characters()
+                : m_type(etype::NONE)
+                , m_str(nullptr)
+                , m_cur(nullptr)
+                , m_end(nullptr)
+            {
+            }
+
+            Characters(const char* str)
+                : m_type(etype::ASCII)
+                , m_str(str)
+                , m_cur(str)
+                , m_end(str)
+            {
+                while (*m_end._ascii != '\0')
+                    m_end._ascii++;
+            }
+
+            Characters(const Characters& chars)
+                : m_type(chars.m_type)
+                , m_str(chars.m_str)
+                , m_cur(chars.m_cur)
+                , m_end(chars.m_end)
+            {
+                while (*m_end._ascii != '\0')
+                    m_end._ascii++;
+            }
+
+            Characters(const Characters& begin, const Characters& until)
+                : m_type(begin.m_type)
+                , m_str(begin.m_str)
+                , m_cur(until.m_cur)
+                , m_end(until.m_end)
+            {
+                while (*m_end._ascii != '\0')
+                    m_end._ascii++;
+            }
+
+            void Select(const Characters& begin, const Characters& cursor);
+
+            void Reset() { m_cur = m_str; }
+
+            uchar32 Read()
+            {
+                switch (m_type.type)
+                {
+                    case etype::ASCII: return read_ascii();
+                    case etype::UTF32: return read_utf32();
+                }
+                return '\0';
+            }
+            uchar32 Peek() const
+            {
+                switch (m_type.type)
+                {
+                    case etype::ASCII: return peek_ascii();
+                    case etype::UTF32: return peek_utf32();
+                }
+                return '\0';
+            }
+
+            bool Valid() const;
+            void Skip();
+
+            void Write(CharactersOut& writer);
+
+            bool operator<(const Characters&) const;
+            bool operator>(const Characters&) const;
+            bool operator<=(const Characters&) const;
+            bool operator>=(const Characters&) const;
+            bool operator==(const Characters&) const;
+            bool operator!=(const Characters&) const;
+
+            Characters& operator=(const Characters&) const;
+        };
+
         class TokenizerInterface
         {
         public:
             /*!
-             * @fn 	bool Check(const Char** )
+             * @fn 	bool Check(Characters&)
              * Check if the string pointed by cursor is complying to this parsing rule
              * @param[in/out] cursor  A cursor to the parsing string, after successful
              * parsing, the cursor value should move to the last character as far as the
@@ -48,7 +202,7 @@ namespace xparser
              * succeeds. Otherwise it returns false
              *
              */
-            virtual bool Check(const Char** cursor) const = 0;
+            virtual bool Check(Characters&) = 0;
         };
 
         /*!
@@ -86,7 +240,7 @@ namespace xparser
             class Not : public TokenizerInterface
             {
             private:
-                const TokenizerInterface& _Tokenizer;
+                TokenizerInterface& _Tokenizer;
                 /*!
                  * @fn 	Not(TokenizerInterface& tok)
                  * Constructor to Not class
@@ -98,8 +252,11 @@ namespace xparser
                  * Constructor to Not
                  * @param[in] tok  contained parsing rule element
                  */
-                Not(const TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(const Char** cursor) const;
+                Not(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -130,8 +287,8 @@ namespace xparser
             class Or : public TokenizerInterface
             {
             private:
-                const TokenizerInterface& _TokenizerA;
-                const TokenizerInterface& _TokenizerB;
+                TokenizerInterface& _TokenizerA;
+                TokenizerInterface& _TokenizerB;
 
             public:
                 /*!
@@ -140,8 +297,12 @@ namespace xparser
                  * @param[in] tok1  the first contained parsing rule element
                  * @param[in] tok2  the second contained parsing rule element
                  */
-                Or(const TokenizerInterface& tok1, const TokenizerInterface& tok2) : _TokenizerA(tok1), _TokenizerB(tok2) {}
-                virtual bool Check(const Char**) const;
+                Or(TokenizerInterface& tok1, TokenizerInterface& tok2)
+                    : _TokenizerA(tok1)
+                    , _TokenizerB(tok2)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -172,8 +333,8 @@ namespace xparser
             class And : public TokenizerInterface
             {
             private:
-                const TokenizerInterface& _TokenizerA;
-                const TokenizerInterface& _TokenizerB;
+                TokenizerInterface& _TokenizerA;
+                TokenizerInterface& _TokenizerB;
 
             public:
                 /*!
@@ -182,9 +343,13 @@ namespace xparser
                  * @param[in] tok1  the first contained parsing rule element
                  * @param[in] tok2  the second contained parsing rule element
                  */
-                And(const TokenizerInterface& tok1, const TokenizerInterface& tok2) : _TokenizerA(tok1), _TokenizerB(tok2) {}
+                And(TokenizerInterface& tok1, TokenizerInterface& tok2)
+                    : _TokenizerA(tok1)
+                    , _TokenizerB(tok2)
+                {
+                }
 
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             /*!
              * @class Sequence
@@ -206,8 +371,8 @@ namespace xparser
             class Sequence : public TokenizerInterface
             {
             private:
-                const TokenizerInterface& _TokenizerA;
-                const TokenizerInterface& _TokenizerB;
+                TokenizerInterface& _TokenizerA;
+                TokenizerInterface& _TokenizerB;
 
             public:
                 /*!
@@ -216,10 +381,12 @@ namespace xparser
                  * @param[in] tok1  the first contained parsing rule element
                  * @param[in] tok2  the next contained parsing rule element
                  */
-                Sequence(const TokenizerInterface& tok1, const TokenizerInterface& tok2) : _TokenizerA(tok1), _TokenizerB(tok2)
+                Sequence(TokenizerInterface& tok1, TokenizerInterface& tok2)
+                    : _TokenizerA(tok1)
+                    , _TokenizerB(tok2)
                 {
                 }
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -243,9 +410,9 @@ namespace xparser
             class Within : public TokenizerInterface
             {
             private:
-                u64                       _Min;
-                u64                       _Max;
-                const TokenizerInterface& _Tokenizer;
+                u64                 _Min;
+                u64                 _Max;
+                TokenizerInterface& _Tokenizer;
 
             public:
                 /*!
@@ -255,15 +422,25 @@ namespace xparser
                  * @param[in] max  Maximum number of repitition
                  * @param[in] tok  the next contained parsing rule element
                  */
-                Within(u64 min, u64 max, const TokenizerInterface& tok) : _Min(min), _Max(max), _Tokenizer(tok) {}
+                Within(u64 min, u64 max, TokenizerInterface& tok)
+                    : _Min(min)
+                    , _Max(max)
+                    , _Tokenizer(tok)
+                {
+                }
                 /*!
                  * @fn 	Within( u64 max, TokenizerInterface& tok)
                  * Constructor to Sequence class
                  * @param[in] max  Maximum number of repitition
                  * @param[in] tok  the next contained parsing rule element
                  */
-                Within(u64 max, const TokenizerInterface& tok) : _Min(0), _Max(max), _Tokenizer(tok) {}
-                virtual bool Check(const Char**) const;
+                Within(u64 max, TokenizerInterface& tok)
+                    : _Min(0)
+                    , _Max(max)
+                    , _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -282,14 +459,13 @@ namespace xparser
              * 		Within(2,4,Is('A')); // "AA","AAA","AAAA" are OK , "","A" or
              * "AAAAA" fail
              * @endcode
-             * @see 	 While, Until, OneOrMore, ZeroOrOne, Filters::Exact
-             * 		, Sequence
+             * @see 	 While, Until, OneOrMore, ZeroOrOne, Filters::Exact, Sequence
              */
             class Times : public TokenizerInterface
             {
             private:
-                s32                       _Max;
-                const TokenizerInterface& _Tokenizer;
+                s32                 _Max;
+                TokenizerInterface& _Tokenizer;
 
             public:
                 /*!
@@ -298,8 +474,12 @@ namespace xparser
                  * @param[in] _Max  number of repitition
                  * @param[in] tok  the next contained parsing rule element
                  */
-                Times(s32 max, const TokenizerInterface& tok) : _Max(max), _Tokenizer(tok) {}
-                virtual bool Check(const Char**) const;
+                Times(s32 max, TokenizerInterface& tok)
+                    : _Max(max)
+                    , _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -315,13 +495,12 @@ namespace xparser
              * @code{.cpp}
              * 		OneOrMore(Is('A')); // "A","AA","AAA"  are OK , "" or "B" fail
              * @endcode
-             * @see 	Times, While, Until, ZeroOrOne, Filters::Exact
-             * 		, Sequence
+             * @see 	Times, While, Until, ZeroOrOne, Filters::Exact, Sequence
              */
             class OneOrMore : public TokenizerInterface
             {
             private:
-                const TokenizerInterface& _Tokenizer;
+                TokenizerInterface& _Tokenizer;
 
             public:
                 /*!
@@ -329,8 +508,11 @@ namespace xparser
                  * Constructor to OneOrMore class
                  * @param[in] tok  the contained parsing rule element
                  */
-                OneOrMore(const TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(const Char**) const;
+                OneOrMore(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -351,7 +533,7 @@ namespace xparser
             class ZeroOrOne : public TokenizerInterface
             {
             private:
-                const TokenizerInterface& _Tokenizer;
+                TokenizerInterface& _Tokenizer;
 
             public:
                 /*!
@@ -359,8 +541,11 @@ namespace xparser
                  * Constructor to ZeroOrOne class
                  * @param[in] tok  the contained parsing rule element
                  */
-                ZeroOrOne(const TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(const Char**) const;
+                ZeroOrOne(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -398,11 +583,14 @@ namespace xparser
                  * Constructor to While class
                  * @param[in] tok  the contained parsing rule element
                  */
-                const TokenizerInterface& _Tokenizer;
+                TokenizerInterface& _Tokenizer;
 
             public:
-                While(const TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(const Char**) const;
+                While(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -422,7 +610,7 @@ namespace xparser
             class Until : public TokenizerInterface
             {
             private:
-                const TokenizerInterface& _Tokenizer;
+                TokenizerInterface& _Tokenizer;
 
             public:
                 /*!
@@ -430,8 +618,11 @@ namespace xparser
                  * Constructor to Ultil class
                  * @param[in] tok  the contained parsing rule element
                  */
-                Until(const TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(const Char**) const;
+                Until(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -448,8 +639,8 @@ namespace xparser
             class Extract : public TokenizerInterface
             {
             private:
-                const TokenizerInterface& _Tokenizer;
-                Char*                     _Input;
+                TokenizerInterface& _Tokenizer;
+                CharactersOut*      _Writer;
 
             public:
                 /*!
@@ -458,20 +649,24 @@ namespace xparser
                  * @param[out] str  the returned string
                  * @param[in] tok  the contained parsing rule element
                  */
-                Extract(Char* str, const TokenizerInterface& tok) : _Input(str), _Tokenizer(tok) {}
-                virtual bool Check(const Char**) const;
+                Extract(CharactersOut* writer, TokenizerInterface& tok)
+                    : _Writer(writer)
+                    , _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
              * @class ReturnToCallback
-             * @brief	It is similar to Exctract.. but it has more delicate usage than
+             * @brief	It is similar to Extract.. but it has more delicate usage than
              * Extract like extract to list or arrays for repititive tokens supplied
              * callback instead of using buffers
              *
              *
              * @b Example:
              * @code{.cpp}
-             * 		void callback(char* _Stream)
+             * 		void callback(Characters& _token)
              * 		{
              * 			// Process the token
              * 		}
@@ -481,11 +676,11 @@ namespace xparser
             class ReturnToCallback : public TokenizerInterface
             {
             public:
-                typedef void (*CallBack)(const Char*);
+                typedef void (*CallBack)(Characters&);
 
             private:
-                const TokenizerInterface& _Tokenizer;
-                CallBack                  cb;
+                TokenizerInterface& _Tokenizer;
+                CallBack            cb;
 
             public:
                 /*!
@@ -494,8 +689,12 @@ namespace xparser
                  * @param[in] cb  the called callback for returning
                  * @param[in] _Tokenizer  the contained parsing rule element
                  */
-                ReturnToCallback(CallBack cb, const TokenizerInterface& tok) : cb(cb), _Tokenizer(tok) {}
-                virtual bool Check(const Char**) const;
+                ReturnToCallback(CallBack cb, TokenizerInterface& tok)
+                    : cb(cb)
+                    , _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             typedef While ZeroOrMore;
@@ -513,20 +712,25 @@ namespace xparser
              */
             class Enclosed : public TokenizerInterface
             {
-                const TokenizerInterface& _Tokenizer;
-                Char*                     open;
-                Char*                     close;
+                TokenizerInterface& _Tokenizer;
+                Characters          m_open;
+                Characters          m_close;
 
             public:
                 /*!
                  * @fn 	Enclosed(Char* open, Char* close, const TokenizerInterface& tok)
                  * Constructor to Extract class
                  * @param[in] open the opening bracket
-                 * @param[in] close  the closing bracket
-                 * @param[in] tok  the contained parsing rule element
+                 * @param[in] close the closing bracket
+                 * @param[in] token the contained parsing rule element
                  */
-                Enclosed(Char* open, Char* close, const TokenizerInterface& tok) : _Tokenizer(tok), open(open), close(close) {}
-                virtual bool Check(const Char**) const;
+                Enclosed(const char* open, const char* close, TokenizerInterface& token)
+                    : _Tokenizer(token)
+                    , m_open(open)
+                    , m_close(close)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
         } // namespace Manipulators
@@ -548,7 +752,7 @@ namespace xparser
             {
             public:
                 Any() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
 
             extern Any ANY;
@@ -567,11 +771,14 @@ namespace xparser
             class In : public TokenizerInterface
             {
             private:
-                const Char* _Input;
+                Characters _Input;
 
             public:
-                In(const Char* str) : _Input(str) {}
-                virtual bool Check(const Char**) const;
+                In(const char* str)
+                    : _Input(str)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -589,11 +796,15 @@ namespace xparser
              */
             class Between : public TokenizerInterface
             {
-                Char _Lower, _Upper;
+                uchar32 _Lower, _Upper;
 
             public:
-                Between(Char a, Char b) : _Lower(a), _Upper(b) {}
-                virtual bool Check(const Char**) const;
+                Between(uchar32 a, uchar32 b)
+                    : _Lower(a)
+                    , _Upper(b)
+                {
+                }
+                virtual bool Check(Characters&);
             };
             // TODO:class SmallLetter;
             // TODO:class CapitalLetter;
@@ -615,7 +826,7 @@ namespace xparser
 
             public:
                 Alphabet() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
 
             extern Alphabet ALPHABET;
@@ -636,7 +847,7 @@ namespace xparser
 
             public:
                 Digit() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
 
             extern Digit DIGIT;
@@ -656,7 +867,7 @@ namespace xparser
 
             public:
                 Hex() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
 
             extern Hex HEX;
@@ -675,7 +886,7 @@ namespace xparser
             {
             public:
                 AlphaNumeric() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
 
             extern AlphaNumeric ALPHANUMERIC;
@@ -695,11 +906,19 @@ namespace xparser
              */
             class Exact : public TokenizerInterface
             {
-                const Char* _Input;
+                Characters _Input;
 
             public:
-                Exact(const Char* str) : _Input(str) {}
-                virtual bool Check(const Char**) const;
+                Exact(const char* str)
+                    : _Input(str)
+                {
+                }
+                Exact(Characters const& str)
+                    : _Input(str)
+                {
+                }
+
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -716,11 +935,14 @@ namespace xparser
              */
             class Like : public TokenizerInterface
             {
-                Char* _Input;
+                Characters _Input;
 
             public:
-                Like(Char* str) : _Input(str) {}
-                virtual bool Check(const Char**) const;
+                Like(const char* str)
+                    : _Input(str)
+                {
+                }
+                virtual bool Check(Characters&);
             };
             /*!
              * @class WhiteSpace
@@ -738,7 +960,7 @@ namespace xparser
             {
             public:
                 WhiteSpace() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern WhiteSpace WHITESPACE;
 
@@ -754,13 +976,15 @@ namespace xparser
              */
             class Is : public TokenizerInterface
             {
-
-                Char _Letter;
+                uchar32 _Letter;
 
             public:
-                Is(const Char c) : _Letter(c) {}
+                Is(const uchar32 c)
+                    : _Letter(c)
+                {
+                }
                 // Is(const Char* s) :letter(s[0]) {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -780,7 +1004,7 @@ namespace xparser
 
             public:
                 Decimal() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern Decimal DECIMAL;
 
@@ -801,7 +1025,7 @@ namespace xparser
 
             public:
                 Word() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern Word WORD;
 
@@ -822,23 +1046,22 @@ namespace xparser
             {
             public:
                 EndOfText() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern EndOfText EOT;
 
             /*!
              * @class EndOfLine
              * @brief	Checks if the character under processing terminates the line
-             * 			...it is identical to using Exact("\\r\\n")for MS
-             * Windows and Is('\\n') Linux
-             *
+             * 			...it is identical to using Exact("\\r\\n") on Windows and
+             *          Is('\\n') on Mac/Linux
              *
              */
             class EndOfLine : public TokenizerInterface
             {
             public:
                 EndOfLine() {}
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern EndOfLine EOL;
 
@@ -860,10 +1083,22 @@ namespace xparser
                 s32 _Min, _Max;
 
             public:
-                Integer(s32 min, s32 max) : _Min(min), _Max(max) {}
-                Integer(s32 max) : _Min(0), _Max(max) {}
-                Integer() : _Min(0), _Max(0x7fffffff) {}
-                virtual bool Check(const Char**) const;
+                Integer(s32 min, s32 max)
+                    : _Min(min)
+                    , _Max(max)
+                {
+                }
+                Integer(s32 max)
+                    : _Min(0)
+                    , _Max(max)
+                {
+                }
+                Integer()
+                    : _Min(0)
+                    , _Max(0x7fffffff)
+                {
+                }
+                virtual bool Check(Characters&);
             };
 
             /*!
@@ -875,7 +1110,7 @@ namespace xparser
              *
              * @b Example:
              * @code{.cpp}
-             * 		Integer(-1.2f,7.24f) ; // "0" "-1.0" "5.447567" are OK ... "-2.0"
+             * 		Float(-1.2f,7.24f) ; // "0" "-1.0" "5.447567" are OK ... "-2.0"
              * or "16.3" fail
              * @endcode
              */
@@ -884,10 +1119,22 @@ namespace xparser
                 f32 _Min, _Max;
 
             public:
-                Float(f32 min, f32 max) : _Min(min), _Max(max) {}
-                Float(f32 max) : _Min(0.0f), _Max(max) {}
-                Float() : _Min(0.0f), _Max(3.402823e+38f) {}
-                virtual bool Check(const Char**) const;
+                Float(f32 min, f32 max)
+                    : _Min(min)
+                    , _Max(max)
+                {
+                }
+                Float(f32 max)
+                    : _Min(0.0f)
+                    , _Max(max)
+                {
+                }
+                Float()
+                    : _Min(0.0f)
+                    , _Max(3.402823e+38f)
+                {
+                }
+                virtual bool Check(Characters&);
             };
             // namespace Date
 
@@ -908,7 +1155,11 @@ namespace xparser
             {
                 s32 Minimum;
                 s32 Maximum;
-                Range(s32 min, s32 max) : Minimum(min), Maximum(max) {}
+                Range(s32 min, s32 max)
+                    : Minimum(min)
+                    , Maximum(max)
+                {
+                }
             } R;
 
             /*!
@@ -920,7 +1171,7 @@ namespace xparser
             class IPv4 : public TokenizerInterface
             {
             public:
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern IPv4 IPV4;
 
@@ -933,7 +1184,7 @@ namespace xparser
             class Host : public TokenizerInterface
             {
             public:
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
 
             extern Host HOST;
@@ -947,7 +1198,7 @@ namespace xparser
             class Email : public TokenizerInterface
             {
             public:
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern Email EMAIL;
 
@@ -960,7 +1211,7 @@ namespace xparser
             class Phone : public TokenizerInterface
             {
             public:
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern Phone PHONE;
 
@@ -973,7 +1224,7 @@ namespace xparser
             class ServerAddress : public TokenizerInterface
             {
             public:
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern ServerAddress SERVERADDRESS;
 
@@ -986,97 +1237,86 @@ namespace xparser
             class Uri : public TokenizerInterface
             {
             public:
-                virtual bool Check(const Char**) const;
+                virtual bool Check(Characters&);
             };
             extern Uri URI;
 
         } // namespace Utils
 
-    } // namespace Rules
+    } // namespace xparser
 
     class StringProcessor
     {
     private:
-        const Char*             _String;
-        const Char*             _Cursor;
-        std::string             _LastTokenized;
-        std::stack<const Char*> _SavedPositions;
+        xparser::Characters _String;
+        xparser::Characters _Cursor;
+        xparser::Characters _LastTokenized;
+        // std::stack<const Char*> _SavedPositions;
 
     public:
-        StringProcessor(const Char* str);
-        bool        Parse(const Rules::TokenizerInterface& tok);
-        bool        Validate(const Rules::TokenizerInterface& tok);
-        const Char* Search(const Rules::TokenizerInterface& tok);
-        s32         GetLastParserPosition();
-        void        Push();
-        void        Pop();
-        bool        IsEOT();
-        void        Reset();
+		StringProcessor();
+        StringProcessor(xparser::Characters const& str);
+
+        bool       Parse( xparser::TokenizerInterface& );
+        bool       Validate( xparser::TokenizerInterface& );
+        xparser::Characters Search( xparser::TokenizerInterface& );
+        s32        GetLastParserPosition();
+        void       Push();
+        void       Pop();
+        bool       IsEOT();
+        void       Reset();
     };
 
-} // namespace xparser
+    inline xcore::xparser::Manipulators::Times operator*(xcore::xparser::TokenizerInterface& tok, s32 times) { return xcore::xparser::Manipulators::Times(times, tok); }
 
-inline xparser::Rules::Manipulators::Times operator*(const xparser::Rules::TokenizerInterface& tok, s32 times)
-{
-    return xparser::Rules::Manipulators::Times(times, tok);
+    inline xcore::xparser::Manipulators::Times operator*(s32 times, xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Times(times, tok); }
+
+    inline xcore::xparser::Manipulators::Within operator*(xcore::xparser::TokenizerInterface& tok, const xcore::xparser::Utils::Range& range)
+    {
+        return xcore::xparser::Manipulators::Within(range.Minimum, range.Maximum, tok);
+    }
+
+    inline xcore::xparser::Manipulators::Within operator*(xcore::xparser::Utils::Range& range, xcore::xparser::TokenizerInterface& tok)
+    {
+        return xcore::xparser::Manipulators::Within(range.Minimum, range.Maximum, tok);
+    }
+
+    inline xcore::xparser::Manipulators::Or operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
+    {
+        return xcore::xparser::Manipulators::Or(t1, t2);
+    }
+
+    inline xcore::xparser::Manipulators::And operator&(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
+    {
+        return xcore::xparser::Manipulators::And(t1, t2);
+    }
+
+    inline xcore::xparser::Manipulators::Sequence operator+(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
+    {
+        return xcore::xparser::Manipulators::Sequence(t1, t2);
+    }
+
+    inline xcore::xparser::Manipulators::Not operator!(xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Not(tok); }
+
+    // inline const xcore::xparser::Manipulators::OneOrMore operator ++(const
+    // xcore::xparser::TokenizerInterface& tok)
+    //{
+    //	return xcore::xparser::Manipulators::OneOrMore(tok);
+    //}
+
+    // inline Parsing::Rules::Arithmatics::Sequence operator >>
+    // (Parsing::Rules::TokenizerInterface& t1, const char* t2)
+    //{
+    //	return Parsing::Rules::Arithmatics::Sequence(t1,
+    // Parsing::Rules::Tokens::Exact(t2));
+    //}
+
+    // inline Parsing::Rules::Arithmatics::Sequence operator >>
+    // (Parsing::Rules::TokenizerInterface& t1, Parsing::Rules::TokenizerInterface&
+    // t2)
+    //{
+    //	return Parsing::Rules::Arithmatics::Sequence(t1, t2);
+    //}
 }
 
-inline xparser::Rules::Manipulators::Times operator*(s32 times, const xparser::Rules::TokenizerInterface& tok)
-{
-    return xparser::Rules::Manipulators::Times(times, tok);
-}
-
-inline xparser::Rules::Manipulators::Within operator*(const xparser::Rules::TokenizerInterface& tok,
-                                                      const xparser::Rules::Utils::Range&       range)
-{
-    return xparser::Rules::Manipulators::Within(range.Minimum, range.Maximum, tok);
-}
-
-inline xparser::Rules::Manipulators::Within operator*(const xparser::Rules::Utils::Range&       range,
-                                                      const xparser::Rules::TokenizerInterface& tok)
-{
-    return xparser::Rules::Manipulators::Within(range.Minimum, range.Maximum, tok);
-}
-
-inline xparser::Rules::Manipulators::Or operator|(const xparser::Rules::TokenizerInterface& t1,
-                                                  const xparser::Rules::TokenizerInterface& t2)
-{
-    return xparser::Rules::Manipulators::Or(t1, t2);
-}
-
-inline xparser::Rules::Manipulators::And operator&(const xparser::Rules::TokenizerInterface& t1,
-                                                   const xparser::Rules::TokenizerInterface& t2)
-{
-    return xparser::Rules::Manipulators::And(t1, t2);
-}
-
-inline xparser::Rules::Manipulators::Sequence operator+(const xparser::Rules::TokenizerInterface& t1,
-                                                        const xparser::Rules::TokenizerInterface& t2)
-{
-    return xparser::Rules::Manipulators::Sequence(t1, t2);
-}
-
-inline xparser::Rules::Manipulators::Not operator!(const xparser::Rules::TokenizerInterface& tok)
-{
-    return xparser::Rules::Manipulators::Not(tok);
-}
-
-// inline const xparser::Rules::Manipulators::OneOrMore operator ++(const
-// xparser::Rules::TokenizerInterface& tok)
-//{
-//	return xparser::Rules::Manipulators::OneOrMore(tok);
-//}
-
-// inline Parsing::Rules::Arithmatics::Sequence operator >>
-// (Parsing::Rules::TokenizerInterface& t1, const char* t2)
-//{
-//	return Parsing::Rules::Arithmatics::Sequence(t1,
-// Parsing::Rules::Tokens::Exact(t2));
-//}
-
-// inline Parsing::Rules::Arithmatics::Sequence operator >>
-// (Parsing::Rules::TokenizerInterface& t1, Parsing::Rules::TokenizerInterface&
-// t2)
-//{
-//	return Parsing::Rules::Arithmatics::Sequence(t1, t2);
-//}
+#endif
