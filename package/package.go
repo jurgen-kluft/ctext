@@ -32,6 +32,7 @@ func GetPackage() *denv.Package {
 	maintest := denv.SetupDefaultCppTestProject("xtext_test", "github.com\\jurgen-kluft\\xtext")
 	maintest.Dependencies = append(maintest.Dependencies, xunittestpkg.GetMainLib())
 	maintest.Dependencies = append(maintest.Dependencies, xentrypkg.GetMainLib())
+	maintest.Dependencies = append(maintest.Dependencies, xbasepkg.GetMainLib())
 	maintest.Dependencies = append(maintest.Dependencies, mainlib)
 
 	mainpkg.AddMainLib(mainlib)

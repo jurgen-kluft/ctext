@@ -9,149 +9,120 @@
 
 namespace xcore
 {
+    class charwriter
+    {
+    public:
+        charwriter();
+        charwriter(char* str, char* end);
+        charwriter(utf32::prune str, utf32::prune end);
+        charwriter(const charwriter&);
+
+        void reset();
+        bool valid() const;
+        void write(uchar32 c);
+
+        bool operator<(const charwriter&) const;
+        bool operator>(const charwriter&) const;
+        bool operator<=(const charwriter&) const;
+        bool operator>=(const charwriter&) const;
+        bool operator==(const charwriter& t) const;
+        bool operator!=(const charwriter& t) const;
+
+        union ptr {
+            void*        _any;
+            char*        _ascii;
+            utf8::rune*  _utf8;
+            utf16::rune* _utf16;
+            utf32::rune* _utf32;
+        };
+
+        s32 m_type;
+        ptr m_str;
+        ptr m_cur;
+        ptr m_end;
+    };
+
+    class charreader
+    {
+    public:
+        charreader();
+        charreader(const char* str);
+        charreader(utf32::pcrune str);
+        charreader(const charreader&);
+
+        s64     size() const;
+        void    reset();
+        bool    valid() const;
+        uchar32 peek() const;
+        uchar32 read();
+        void    skip();
+        void    select(charreader const& from, charreader const& until);
+
+        charreader& operator=(const charreader&);
+        bool        operator<(const charreader&) const;
+        bool        operator>(const charreader&) const;
+        bool        operator<=(const charreader&) const;
+        bool        operator>=(const charreader&) const;
+        bool        operator==(const charreader& t) const;
+        bool        operator!=(const charreader& t) const;
+
+        union crunes {
+            inline crunes()
+                : _ascii()
+            {
+            }
+            ascii::crunes _ascii;
+            utf8::crunes  _utf8;
+            utf16::crunes _utf16;
+            utf32::crunes _utf32;
+        };
+        crunes m_runes;
+        s32    m_type;
+    };
+
+    class StringWriter
+    {
+    };
+
+    class StringReader
+    {
+        charreader m_str;
+
+    public:
+        StringReader();
+        StringReader(const char* str);
+        StringReader(const StringReader& chars);
+        StringReader(const StringReader& begin, const StringReader& until);
+
+        s64  Size() const;
+        void Reset();
+
+        uchar32 Read();
+        uchar32 Peek() const;
+
+        void Select(const StringReader& begin, const StringReader& cursor);
+        bool Valid() const;
+        void Skip();
+
+        void Write(StringWriter& writer);
+
+        bool operator<(const StringReader&) const;
+        bool operator>(const StringReader&) const;
+        bool operator<=(const StringReader&) const;
+        bool operator>=(const StringReader&) const;
+        bool operator==(const StringReader&) const;
+        bool operator!=(const StringReader&) const;
+
+        StringReader& operator=(const StringReader&);
+    };
+
     namespace xparser
     {
-        class CharactersOut
-        {
-            struct charptr
-            {
-                union {
-                    void*        _any;
-                    char*        _ascii;
-                    utf8::rune*  _utf8;
-                    utf16::rune* _utf16;
-                    utf32::rune* _utf32;
-                };
-                charptr(char* str) : _ascii(str) {}
-            };
-            class etype
-            {
-            public:
-                enum
-                {
-                    ASCII = 0,
-                    UTF8  = 1,
-                    UTF16 = 2,
-                    UTF32 = 4
-                };
-                s32 type;
-                etype() : type(ASCII) {}
-                etype(s32 t) : type(t) {}
-                etype(const etype& t) : type(t.type) {}
-                bool operator==(const etype& t) const { return t.type == type; }
-                bool operator!=(const etype& t) const { return t.type != type; }
-            };
-            etype   m_type;
-            charptr m_str;
-            charptr m_cur;
-            charptr m_end;
-        };
-
-        class Characters
-        {
-            struct charptr
-            {
-                union {
-                    void const*        _any;
-                    const char*        _ascii;
-                    const utf8::rune*  _utf8;
-                    const utf16::rune* _utf16;
-                    const utf32::rune* _utf32;
-                };
-                charptr(const char* str) : _ascii(str) {}
-            };
-            class etype
-            {
-            public:
-                enum
-                {
-                    NONE  = -1,
-                    ASCII = 0,
-                    UTF8  = 1,
-                    UTF16 = 2,
-                    UTF32 = 4
-                };
-                s32 type;
-                etype() : type(ASCII) {}
-                etype(s32 t) : type(t) {}
-                etype(const etype& t) : type(t.type) {}
-                bool operator==(const etype& t) const { return t.type == type; }
-                bool operator!=(const etype& t) const { return t.type != type; }
-            };
-            etype          m_type;
-            charptr        m_str;
-            charptr        m_cur;
-            charptr        m_end;
-            inline uchar32 peek_ascii() const { return (m_cur._ascii != nullptr && m_cur._ascii < m_end._ascii) ? *m_cur._ascii : '\0'; }
-            inline uchar32 peek_utf32() const { return (m_cur._utf32 != nullptr && m_cur._utf32 < m_end._utf32) ? *m_cur._utf32 : '\0'; }
-
-            inline uchar32 read_ascii() { return (m_cur._ascii != nullptr && m_cur._ascii < m_end._ascii) ? *m_cur._ascii++ : '\0'; }
-            inline uchar32 read_utf32() { return (m_cur._utf32 != nullptr && m_cur._utf32 < m_end._utf32) ? *m_cur._utf32++ : '\0'; }
-
-        public:
-            Characters() : m_type(etype::NONE), m_str(nullptr), m_cur(nullptr), m_end(nullptr) {}
-
-            Characters(const char* str) : m_type(etype::ASCII), m_str(str), m_cur(str), m_end(str)
-            {
-                while (*m_end._ascii != '\0')
-                    m_end._ascii++;
-            }
-
-            Characters(const Characters& chars) : m_type(chars.m_type), m_str(chars.m_str), m_cur(chars.m_cur), m_end(chars.m_end)
-            {
-                while (*m_end._ascii != '\0')
-                    m_end._ascii++;
-            }
-
-            Characters(const Characters& begin, const Characters& until) : m_type(begin.m_type), m_str(begin.m_str), m_cur(until.m_cur), m_end(until.m_end)
-            {
-                while (*m_end._ascii != '\0')
-                    m_end._ascii++;
-            }
-
-            void Select(const Characters& begin, const Characters& cursor);
-
-            void Reset() { m_cur = m_str; }
-
-            uchar32 Read()
-            {
-                switch (m_type.type)
-                {
-                    case etype::ASCII: return read_ascii();
-                    case etype::UTF32: return read_utf32();
-                }
-                return '\0';
-            }
-            uchar32 Peek() const
-            {
-                switch (m_type.type)
-                {
-                    case etype::ASCII: return peek_ascii();
-                    case etype::UTF32: return peek_utf32();
-                }
-                return '\0';
-            }
-
-            bool Valid() const;
-            void Skip();
-
-            void Write(CharactersOut& writer);
-
-            bool operator<(const Characters&) const;
-            bool operator>(const Characters&) const;
-            bool operator<=(const Characters&) const;
-            bool operator>=(const Characters&) const;
-            bool operator==(const Characters&) const;
-            bool operator!=(const Characters&) const;
-
-            Characters& operator=(const Characters&) const;
-        };
-
         class TokenizerInterface
         {
         public:
             /*!
-             * @fn 	bool Check(Characters&)
+             * @fn 	bool Check(StringReader&)
              * Check if the string pointed by cursor is complying to this parsing rule
              * @param[in/out] cursor  A cursor to the parsing string, after successful
              * parsing, the cursor value should move to the last character as far as the
@@ -160,7 +131,7 @@ namespace xcore
              * succeeds. Otherwise it returns false
              *
              */
-            virtual bool Check(Characters&) = 0;
+            virtual bool Check(StringReader&) = 0;
         };
 
         /*!
@@ -210,8 +181,11 @@ namespace xcore
                  * Constructor to Not
                  * @param[in] tok  contained parsing rule element
                  */
-                Not(TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(Characters&);
+                Not(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -252,8 +226,12 @@ namespace xcore
                  * @param[in] tok1  the first contained parsing rule element
                  * @param[in] tok2  the second contained parsing rule element
                  */
-                Or(TokenizerInterface& tok1, TokenizerInterface& tok2) : _TokenizerA(tok1), _TokenizerB(tok2) {}
-                virtual bool Check(Characters&);
+                Or(TokenizerInterface& tok1, TokenizerInterface& tok2)
+                    : _TokenizerA(tok1)
+                    , _TokenizerB(tok2)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -294,9 +272,13 @@ namespace xcore
                  * @param[in] tok1  the first contained parsing rule element
                  * @param[in] tok2  the second contained parsing rule element
                  */
-                And(TokenizerInterface& tok1, TokenizerInterface& tok2) : _TokenizerA(tok1), _TokenizerB(tok2) {}
+                And(TokenizerInterface& tok1, TokenizerInterface& tok2)
+                    : _TokenizerA(tok1)
+                    , _TokenizerB(tok2)
+                {
+                }
 
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             /*!
              * @class Sequence
@@ -328,8 +310,12 @@ namespace xcore
                  * @param[in] tok1  the first contained parsing rule element
                  * @param[in] tok2  the next contained parsing rule element
                  */
-                Sequence(TokenizerInterface& tok1, TokenizerInterface& tok2) : _TokenizerA(tok1), _TokenizerB(tok2) {}
-                virtual bool Check(Characters&);
+                Sequence(TokenizerInterface& tok1, TokenizerInterface& tok2)
+                    : _TokenizerA(tok1)
+                    , _TokenizerB(tok2)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -365,15 +351,25 @@ namespace xcore
                  * @param[in] max  Maximum number of repitition
                  * @param[in] tok  the next contained parsing rule element
                  */
-                Within(u64 min, u64 max, TokenizerInterface& tok) : _Min(min), _Max(max), _Tokenizer(tok) {}
+                Within(u64 min, u64 max, TokenizerInterface& tok)
+                    : _Min(min)
+                    , _Max(max)
+                    , _Tokenizer(tok)
+                {
+                }
                 /*!
                  * @fn 	Within( u64 max, TokenizerInterface& tok)
                  * Constructor to Sequence class
                  * @param[in] max  Maximum number of repitition
                  * @param[in] tok  the next contained parsing rule element
                  */
-                Within(u64 max, TokenizerInterface& tok) : _Min(0), _Max(max), _Tokenizer(tok) {}
-                virtual bool Check(Characters&);
+                Within(u64 max, TokenizerInterface& tok)
+                    : _Min(0)
+                    , _Max(max)
+                    , _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -407,8 +403,12 @@ namespace xcore
                  * @param[in] _Max  number of repitition
                  * @param[in] tok  the next contained parsing rule element
                  */
-                Times(s32 max, TokenizerInterface& tok) : _Max(max), _Tokenizer(tok) {}
-                virtual bool Check(Characters&);
+                Times(s32 max, TokenizerInterface& tok)
+                    : _Max(max)
+                    , _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -437,8 +437,11 @@ namespace xcore
                  * Constructor to OneOrMore class
                  * @param[in] tok  the contained parsing rule element
                  */
-                OneOrMore(TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(Characters&);
+                OneOrMore(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -467,8 +470,11 @@ namespace xcore
                  * Constructor to ZeroOrOne class
                  * @param[in] tok  the contained parsing rule element
                  */
-                ZeroOrOne(TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(Characters&);
+                ZeroOrOne(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -509,8 +515,11 @@ namespace xcore
                 TokenizerInterface& _Tokenizer;
 
             public:
-                While(TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(Characters&);
+                While(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -538,8 +547,11 @@ namespace xcore
                  * Constructor to Ultil class
                  * @param[in] tok  the contained parsing rule element
                  */
-                Until(TokenizerInterface& tok) : _Tokenizer(tok) {}
-                virtual bool Check(Characters&);
+                Until(TokenizerInterface& tok)
+                    : _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -557,7 +569,7 @@ namespace xcore
             {
             private:
                 TokenizerInterface& _Tokenizer;
-                CharactersOut*      _Writer;
+                StringReader&       _Selection;
 
             public:
                 /*!
@@ -566,8 +578,12 @@ namespace xcore
                  * @param[out] str  the returned string
                  * @param[in] tok  the contained parsing rule element
                  */
-                Extract(CharactersOut* writer, TokenizerInterface& tok) : _Writer(writer), _Tokenizer(tok) {}
-                virtual bool Check(Characters&);
+                Extract(StringReader& selection, TokenizerInterface& tok)
+                    : _Selection(selection)
+                    , _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -579,7 +595,7 @@ namespace xcore
              *
              * @b Example:
              * @code{.cpp}
-             * 		void callback(Characters& _token)
+             * 		void callback(StringReader& _token)
              * 		{
              * 			// Process the token
              * 		}
@@ -589,7 +605,7 @@ namespace xcore
             class ReturnToCallback : public TokenizerInterface
             {
             public:
-                typedef void (*CallBack)(Characters&);
+                typedef void (*CallBack)(StringReader&);
 
             private:
                 TokenizerInterface& _Tokenizer;
@@ -602,8 +618,12 @@ namespace xcore
                  * @param[in] cb  the called callback for returning
                  * @param[in] _Tokenizer  the contained parsing rule element
                  */
-                ReturnToCallback(CallBack cb, TokenizerInterface& tok) : cb(cb), _Tokenizer(tok) {}
-                virtual bool Check(Characters&);
+                ReturnToCallback(CallBack cb, TokenizerInterface& tok)
+                    : cb(cb)
+                    , _Tokenizer(tok)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             typedef While ZeroOrMore;
@@ -622,8 +642,8 @@ namespace xcore
             class Enclosed : public TokenizerInterface
             {
                 TokenizerInterface& _Tokenizer;
-                Characters          m_open;
-                Characters          m_close;
+                StringReader        m_open;
+                StringReader        m_close;
 
             public:
                 /*!
@@ -633,8 +653,13 @@ namespace xcore
                  * @param[in] close the closing bracket
                  * @param[in] token the contained parsing rule element
                  */
-                Enclosed(const char* open, const char* close, TokenizerInterface& token) : _Tokenizer(token), m_open(open), m_close(close) {}
-                virtual bool Check(Characters&);
+                Enclosed(const char* open, const char* close, TokenizerInterface& token)
+                    : _Tokenizer(token)
+                    , m_open(open)
+                    , m_close(close)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
         } // namespace Manipulators
@@ -656,7 +681,7 @@ namespace xcore
             {
             public:
                 Any() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
 
             extern Any ANY;
@@ -675,11 +700,14 @@ namespace xcore
             class In : public TokenizerInterface
             {
             private:
-                Characters _Input;
+                StringReader _Input;
 
             public:
-                In(const char* str) : _Input(str) {}
-                virtual bool Check(Characters&);
+                In(const char* str)
+                    : _Input(str)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -700,8 +728,12 @@ namespace xcore
                 uchar32 _Lower, _Upper;
 
             public:
-                Between(uchar32 a, uchar32 b) : _Lower(a), _Upper(b) {}
-                virtual bool Check(Characters&);
+                Between(uchar32 a, uchar32 b)
+                    : _Lower(a)
+                    , _Upper(b)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
             // TODO:class SmallLetter;
             // TODO:class CapitalLetter;
@@ -723,7 +755,7 @@ namespace xcore
 
             public:
                 Alphabet() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
 
             extern Alphabet ALPHABET;
@@ -744,7 +776,7 @@ namespace xcore
 
             public:
                 Digit() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
 
             extern Digit DIGIT;
@@ -764,7 +796,7 @@ namespace xcore
 
             public:
                 Hex() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
 
             extern Hex HEX;
@@ -783,7 +815,7 @@ namespace xcore
             {
             public:
                 AlphaNumeric() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
 
             extern AlphaNumeric ALPHANUMERIC;
@@ -803,13 +835,19 @@ namespace xcore
              */
             class Exact : public TokenizerInterface
             {
-                Characters _Input;
+                StringReader _Input;
 
             public:
-                Exact(const char* str) : _Input(str) {}
-                Exact(Characters const& str) : _Input(str) {}
+                Exact(const char* str)
+                    : _Input(str)
+                {
+                }
+                Exact(StringReader const& str)
+                    : _Input(str)
+                {
+                }
 
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -826,11 +864,14 @@ namespace xcore
              */
             class Like : public TokenizerInterface
             {
-                Characters _Input;
+                StringReader _Input;
 
             public:
-                Like(const char* str) : _Input(str) {}
-                virtual bool Check(Characters&);
+                Like(const char* str)
+                    : _Input(str)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
             /*!
              * @class WhiteSpace
@@ -848,7 +889,7 @@ namespace xcore
             {
             public:
                 WhiteSpace() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern WhiteSpace WHITESPACE;
 
@@ -867,9 +908,12 @@ namespace xcore
                 uchar32 _Letter;
 
             public:
-                Is(const uchar32 c) : _Letter(c) {}
+                Is(const uchar32 c)
+                    : _Letter(c)
+                {
+                }
                 // Is(const Char* s) :letter(s[0]) {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -889,7 +933,7 @@ namespace xcore
 
             public:
                 Decimal() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern Decimal DECIMAL;
 
@@ -910,7 +954,7 @@ namespace xcore
 
             public:
                 Word() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern Word WORD;
 
@@ -931,7 +975,7 @@ namespace xcore
             {
             public:
                 EndOfText() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern EndOfText EOT;
 
@@ -946,7 +990,7 @@ namespace xcore
             {
             public:
                 EndOfLine() {}
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern EndOfLine EOL;
 
@@ -968,10 +1012,22 @@ namespace xcore
                 s32 _Min, _Max;
 
             public:
-                Integer(s32 min, s32 max) : _Min(min), _Max(max) {}
-                Integer(s32 max) : _Min(0), _Max(max) {}
-                Integer() : _Min(0), _Max(0x7fffffff) {}
-                virtual bool Check(Characters&);
+                Integer(s32 min, s32 max)
+                    : _Min(min)
+                    , _Max(max)
+                {
+                }
+                Integer(s32 max)
+                    : _Min(0)
+                    , _Max(max)
+                {
+                }
+                Integer()
+                    : _Min(0)
+                    , _Max(0x7fffffff)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
 
             /*!
@@ -992,10 +1048,22 @@ namespace xcore
                 f32 _Min, _Max;
 
             public:
-                Float(f32 min, f32 max) : _Min(min), _Max(max) {}
-                Float(f32 max) : _Min(0.0f), _Max(max) {}
-                Float() : _Min(0.0f), _Max(3.402823e+38f) {}
-                virtual bool Check(Characters&);
+                Float(f32 min, f32 max)
+                    : _Min(min)
+                    , _Max(max)
+                {
+                }
+                Float(f32 max)
+                    : _Min(0.0f)
+                    , _Max(max)
+                {
+                }
+                Float()
+                    : _Min(0.0f)
+                    , _Max(3.402823e+38f)
+                {
+                }
+                virtual bool Check(StringReader&);
             };
             // namespace Date
 
@@ -1016,7 +1084,11 @@ namespace xcore
             {
                 s32 Minimum;
                 s32 Maximum;
-                Range(s32 min, s32 max) : Minimum(min), Maximum(max) {}
+                Range(s32 min, s32 max)
+                    : Minimum(min)
+                    , Maximum(max)
+                {
+                }
             } R;
 
             /*!
@@ -1028,7 +1100,7 @@ namespace xcore
             class IPv4 : public TokenizerInterface
             {
             public:
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern IPv4 IPV4;
 
@@ -1041,7 +1113,7 @@ namespace xcore
             class Host : public TokenizerInterface
             {
             public:
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
 
             extern Host HOST;
@@ -1055,7 +1127,7 @@ namespace xcore
             class Email : public TokenizerInterface
             {
             public:
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern Email EMAIL;
 
@@ -1068,7 +1140,7 @@ namespace xcore
             class Phone : public TokenizerInterface
             {
             public:
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern Phone PHONE;
 
@@ -1081,7 +1153,7 @@ namespace xcore
             class ServerAddress : public TokenizerInterface
             {
             public:
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern ServerAddress SERVERADDRESS;
 
@@ -1094,7 +1166,7 @@ namespace xcore
             class Uri : public TokenizerInterface
             {
             public:
-                virtual bool Check(Characters&);
+                virtual bool Check(StringReader&);
             };
             extern Uri URI;
 
@@ -1105,19 +1177,19 @@ namespace xcore
     class StringProcessor
     {
     private:
-        xparser::Characters _String;
-        xparser::Characters _Cursor;
-        xparser::Characters _LastTokenized;
+        StringReader _String;
+        StringReader _Cursor;
+        StringReader _LastTokenized;
 
     public:
         StringProcessor();
-        StringProcessor(xparser::Characters const& str);
+        StringProcessor(StringReader const& str);
 
-        bool                Parse(xparser::TokenizerInterface&);
-        bool                Validate(xparser::TokenizerInterface&);
-        xparser::Characters Search(xparser::TokenizerInterface&);
-        bool                IsEOT();
-        void                Reset();
+        bool         Parse(xparser::TokenizerInterface&);
+        bool         Validate(xparser::TokenizerInterface&);
+        StringReader Search(xparser::TokenizerInterface&);
+        bool         IsEOT();
+        void         Reset();
     };
 
     inline xcore::xparser::Manipulators::Times operator*(xcore::xparser::TokenizerInterface& tok, s32 times) { return xcore::xparser::Manipulators::Times(times, tok); }
@@ -1134,11 +1206,20 @@ namespace xcore
         return xcore::xparser::Manipulators::Within(range.Minimum, range.Maximum, tok);
     }
 
-    inline xcore::xparser::Manipulators::Or operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Or(t1, t2); }
+    inline xcore::xparser::Manipulators::Or operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
+    {
+        return xcore::xparser::Manipulators::Or(t1, t2);
+    }
 
-    inline xcore::xparser::Manipulators::And operator&(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::And(t1, t2); }
+    inline xcore::xparser::Manipulators::And operator&(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
+    {
+        return xcore::xparser::Manipulators::And(t1, t2);
+    }
 
-    inline xcore::xparser::Manipulators::Sequence operator+(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Sequence(t1, t2); }
+    inline xcore::xparser::Manipulators::Sequence operator+(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
+    {
+        return xcore::xparser::Manipulators::Sequence(t1, t2);
+    }
 
     inline xcore::xparser::Manipulators::Not operator!(xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Not(tok); }
 
