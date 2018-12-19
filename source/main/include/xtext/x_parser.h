@@ -9,17 +9,29 @@
 
 namespace xcore
 {
+    // Move to xbase
+    // Actually this can totally replace the runes/crunes everywhere.
+    // Even for console, we can pass this charreader and literally use
+    // any string format, from ascii, utf16 ....
+    // 
+    class charreader;
+
     class charwriter
     {
     public:
         charwriter();
         charwriter(char* str, char* end);
         charwriter(utf32::prune str, utf32::prune end);
+        charreader(ascii::runes const& str);
+        charreader(utf8::runes const& str);
+        charreader(utf16::runes const& str);
+        charreader(utf32::runes const& str);
         charwriter(const charwriter&);
 
         void reset();
         bool valid() const;
         void write(uchar32 c);
+        void write(charreader const& c);
 
         bool operator<(const charwriter&) const;
         bool operator>(const charwriter&) const;
@@ -28,18 +40,15 @@ namespace xcore
         bool operator==(const charwriter& t) const;
         bool operator!=(const charwriter& t) const;
 
-        union ptr {
-            void*        _any;
-            char*        _ascii;
-            utf8::rune*  _utf8;
-            utf16::rune* _utf16;
-            utf32::rune* _utf32;
+        union runes {
+            inline runes() : _ascii() {}
+            ascii::runes _ascii;
+            utf8::runes  _utf8;
+            utf16::runes _utf16;
+            utf32::runes _utf32;
         };
-
-        s32 m_type;
-        ptr m_str;
-        ptr m_cur;
-        ptr m_end;
+        runes  m_runes;
+        s32    m_type;
     };
 
     class charreader
@@ -48,6 +57,11 @@ namespace xcore
         charreader();
         charreader(const char* str);
         charreader(utf32::pcrune str);
+        charreader(ascii::crunes const& str);
+        charreader(utf8::crunes const& str);
+        charreader(utf16::crunes const& str);
+        charreader(utf32::crunes const& str);
+        charreader(const charwriter&);
         charreader(const charreader&);
 
         s64     size() const;
@@ -67,10 +81,7 @@ namespace xcore
         bool        operator!=(const charreader& t) const;
 
         union crunes {
-            inline crunes()
-                : _ascii()
-            {
-            }
+            inline crunes() : _ascii() {}
             ascii::crunes _ascii;
             utf8::crunes  _utf8;
             utf16::crunes _utf16;
@@ -152,6 +163,54 @@ namespace xcore
          */
         namespace Manipulators
         {
+
+#define MANIPULATOR1(_NAME_)                                 \
+    class _NAME_ : public TokenizerInterface                 \
+    {                                                        \
+    private:                                                 \
+        TokenizerInterface& _Tokenizer;                      \
+                                                             \
+    public:                                                  \
+        _NAME_(TokenizerInterface& tok) : _Tokenizer(tok) {} \
+        virtual bool Check(StringReader&);                   \
+    }
+#define MANIPULATOR2(_NAME_)                                                                                 \
+    class _NAME_ : public TokenizerInterface                                                                 \
+    {                                                                                                        \
+    private:                                                                                                 \
+        TokenizerInterface& _TokenizerA;                                                                     \
+        TokenizerInterface& _TokenizerB;                                                                     \
+                                                                                                             \
+    public:                                                                                                  \
+        _NAME_(TokenizerInterface& toka, TokenizerInterface& tokb) : _TokenizerA(toka), _TokenizerB(tokb) {} \
+        virtual bool Check(StringReader&);                                                                   \
+    }
+
+#define MANIPULATOR11(_NAME_, _MTYPE1_, _MNAME1_)                                          \
+    class _NAME_ : public TokenizerInterface                                               \
+    {                                                                                      \
+    private:                                                                               \
+        _MTYPE1_            _MNAME_1;                                                      \
+        TokenizerInterface& _TokenizerA;                                                   \
+                                                                                           \
+    public:                                                                                \
+        _NAME_(_MTYPE1_ m1, TokenizerInterface& toka) : _MNAME_1(m1), _TokenizerA(toka) {} \
+        virtual bool Check(StringReader&);                                                 \
+    }
+
+#define MANIPULATOR12(_NAME_, _MTYPE1_, _MNAME1_, _MTYPE2_, _MNAME2_)                                                 \
+    class _NAME_ : public TokenizerInterface                                                                          \
+    {                                                                                                                 \
+    private:                                                                                                          \
+        _MTYPE1_            _MNAME_1;                                                                                 \
+        _MTYPE2_            _MNAME_2;                                                                                 \
+        TokenizerInterface& _TokenizerA;                                                                              \
+                                                                                                                      \
+    public:                                                                                                           \
+        _NAME_(_MTYPE1_ m1, _MTYPE2_ m2, TokenizerInterface& toka) : _MNAME_1(m1), _MNAME_2(m2), _TokenizerA(toka) {} \
+        virtual bool Check(StringReader&);                                                                            \
+    }
+
             /*!
              * @class Not
              * @brief it is a negating effect parsing element. it turns the parsing process
@@ -166,27 +225,7 @@ namespace xcore
              * @endcode
              * @see And, Or, Not
              */
-            class Not : public TokenizerInterface
-            {
-            private:
-                TokenizerInterface& _Tokenizer;
-                /*!
-                 * @fn 	Not(TokenizerInterface& tok)
-                 * Constructor to Not class
-                 * @param[in] tok  contained parsing rule element
-                 */
-            public:
-                /*!
-                 * @fn 	Not(TokenizerInterface& tok)
-                 * Constructor to Not
-                 * @param[in] tok  contained parsing rule element
-                 */
-                Not(TokenizerInterface& tok)
-                    : _Tokenizer(tok)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR1(Not);
 
             /*!
              * @class Or
@@ -213,26 +252,7 @@ namespace xcore
              * @endcode
              * @see And, Or, Not
              */
-            class Or : public TokenizerInterface
-            {
-            private:
-                TokenizerInterface& _TokenizerA;
-                TokenizerInterface& _TokenizerB;
-
-            public:
-                /*!
-                 * @fn 	Or(TokenizerInterface& tok1, TokenizerInterface& tok2)
-                 * Constructor to Or class
-                 * @param[in] tok1  the first contained parsing rule element
-                 * @param[in] tok2  the second contained parsing rule element
-                 */
-                Or(TokenizerInterface& tok1, TokenizerInterface& tok2)
-                    : _TokenizerA(tok1)
-                    , _TokenizerB(tok2)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR2(Or);
 
             /*!
              * @class And
@@ -259,27 +279,7 @@ namespace xcore
              * @endcode
              * @see And, Or, Not
              */
-            class And : public TokenizerInterface
-            {
-            private:
-                TokenizerInterface& _TokenizerA;
-                TokenizerInterface& _TokenizerB;
-
-            public:
-                /*!
-                 * @fn 	And(TokenizerInterface& tok1, TokenizerInterface& tok2)
-                 * Constructor to And class
-                 * @param[in] tok1  the first contained parsing rule element
-                 * @param[in] tok2  the second contained parsing rule element
-                 */
-                And(TokenizerInterface& tok1, TokenizerInterface& tok2)
-                    : _TokenizerA(tok1)
-                    , _TokenizerB(tok2)
-                {
-                }
-
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR2(And);
             /*!
              * @class Sequence
              * @brief it accepts two parsing elements and execute them sequentialy in order
@@ -296,27 +296,7 @@ namespace xcore
              * @endcode
              * @see Exact, Within
              */
-
-            class Sequence : public TokenizerInterface
-            {
-            private:
-                TokenizerInterface& _TokenizerA;
-                TokenizerInterface& _TokenizerB;
-
-            public:
-                /*!
-                 * @fn 	Sequence(TokenizerInterface& tok1, TokenizerInterface& tok2)
-                 * Constructor to Sequence class
-                 * @param[in] tok1  the first contained parsing rule element
-                 * @param[in] tok2  the next contained parsing rule element
-                 */
-                Sequence(TokenizerInterface& tok1, TokenizerInterface& tok2)
-                    : _TokenizerA(tok1)
-                    , _TokenizerB(tok2)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR2(Sequence);
 
             /*!
              * @class Within
@@ -336,41 +316,7 @@ namespace xcore
              * @see 	Times, While, Until, OneOrMore, ZeroOrOne, Filters::Exact
              * 		, Sequence
              */
-            class Within : public TokenizerInterface
-            {
-            private:
-                u64                 _Min;
-                u64                 _Max;
-                TokenizerInterface& _Tokenizer;
-
-            public:
-                /*!
-                 * @fn 	Within(u64 min, u64 max, TokenizerInterface& tok)
-                 * Constructor to Sequence class
-                 * @param[in] min  Minimum number of repitition
-                 * @param[in] max  Maximum number of repitition
-                 * @param[in] tok  the next contained parsing rule element
-                 */
-                Within(u64 min, u64 max, TokenizerInterface& tok)
-                    : _Min(min)
-                    , _Max(max)
-                    , _Tokenizer(tok)
-                {
-                }
-                /*!
-                 * @fn 	Within( u64 max, TokenizerInterface& tok)
-                 * Constructor to Sequence class
-                 * @param[in] max  Maximum number of repitition
-                 * @param[in] tok  the next contained parsing rule element
-                 */
-                Within(u64 max, TokenizerInterface& tok)
-                    : _Min(0)
-                    , _Max(max)
-                    , _Tokenizer(tok)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR12(Within, u64, _Min, u64, _Max);
 
             /*!
              * @class Times
@@ -390,26 +336,7 @@ namespace xcore
              * @endcode
              * @see 	 While, Until, OneOrMore, ZeroOrOne, Filters::Exact, Sequence
              */
-            class Times : public TokenizerInterface
-            {
-            private:
-                s32                 _Max;
-                TokenizerInterface& _Tokenizer;
-
-            public:
-                /*!
-                 * @fn 	Times( s32 max, TokenizerInterface& tok)
-                 * Constructor to Sequence class
-                 * @param[in] _Max  number of repitition
-                 * @param[in] tok  the next contained parsing rule element
-                 */
-                Times(s32 max, TokenizerInterface& tok)
-                    : _Max(max)
-                    , _Tokenizer(tok)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR11(Times, s32, _Max);
 
             /*!
              * @class OneOrMore
@@ -426,23 +353,7 @@ namespace xcore
              * @endcode
              * @see 	Times, While, Until, ZeroOrOne, Filters::Exact, Sequence
              */
-            class OneOrMore : public TokenizerInterface
-            {
-            private:
-                TokenizerInterface& _Tokenizer;
-
-            public:
-                /*!
-                 * @fn 	OneOrMore(TokenizerInterface& tok)
-                 * Constructor to OneOrMore class
-                 * @param[in] tok  the contained parsing rule element
-                 */
-                OneOrMore(TokenizerInterface& tok)
-                    : _Tokenizer(tok)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR1(OneOrMore);
 
             /*!
              * @class ZeroOrOne
@@ -459,23 +370,7 @@ namespace xcore
              * @see 	Times, While, Until, ZeroOrOne, Filters::Exact
              * 		, Sequence
              */
-            class ZeroOrOne : public TokenizerInterface
-            {
-            private:
-                TokenizerInterface& _Tokenizer;
-
-            public:
-                /*!
-                 * @fn 	ZeroOrOne(TokenizerInterface& tok)
-                 * Constructor to ZeroOrOne class
-                 * @param[in] tok  the contained parsing rule element
-                 */
-                ZeroOrOne(TokenizerInterface& tok)
-                    : _Tokenizer(tok)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR1(ZeroOrMore);
 
             /*!
              * @class Optional
@@ -504,23 +399,7 @@ namespace xcore
              * @see 	Times, While, Until, ZeroOrOne, Filters::Exact
              * 		, Sequence
              */
-            class While : public TokenizerInterface
-            {
-            private:
-                /*!
-                 * @fn 	While(TokenizerInterface& tok)
-                 * Constructor to While class
-                 * @param[in] tok  the contained parsing rule element
-                 */
-                TokenizerInterface& _Tokenizer;
-
-            public:
-                While(TokenizerInterface& tok)
-                    : _Tokenizer(tok)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR1(While);
 
             /*!
              * @class Until
@@ -536,23 +415,7 @@ namespace xcore
              * @see 	Times, While, Until, ZeroOrOne, Filters::Exact
              * 		, Sequence
              */
-            class Until : public TokenizerInterface
-            {
-            private:
-                TokenizerInterface& _Tokenizer;
-
-            public:
-                /*!
-                 * @fn 	Until(TokenizerInterface& tok)
-                 * Constructor to Ultil class
-                 * @param[in] tok  the contained parsing rule element
-                 */
-                Until(TokenizerInterface& tok)
-                    : _Tokenizer(tok)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR1(Until);
 
             /*!
              * @class Extract
@@ -565,26 +428,7 @@ namespace xcore
              * 		Extract(buffer,Is('C')) ; // if "C" .. buffer = "C"
              * @endcode
              */
-            class Extract : public TokenizerInterface
-            {
-            private:
-                TokenizerInterface& _Tokenizer;
-                StringReader&       _Selection;
-
-            public:
-                /*!
-                 * @fn 	Extract(TokenizerInterface& tok)
-                 * Constructor to Extract class
-                 * @param[out] str  the returned string
-                 * @param[in] tok  the contained parsing rule element
-                 */
-                Extract(StringReader& selection, TokenizerInterface& tok)
-                    : _Selection(selection)
-                    , _Tokenizer(tok)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR11(Within, StringReader&, _Selection);
 
             /*!
              * @class ReturnToCallback
@@ -602,29 +446,7 @@ namespace xcore
              * 		ReturnToCallback(callback,Is('C')) ; //
              * @endcode
              */
-            class ReturnToCallback : public TokenizerInterface
-            {
-            public:
-                typedef void (*CallBack)(StringReader&);
-
-            private:
-                TokenizerInterface& _Tokenizer;
-                CallBack            cb;
-
-            public:
-                /*!
-                 * @fn 	ReturnToCallback(CallBack cb, const TokenizerInterface&
-                 * _Tokenizer) Constructor to Extract class
-                 * @param[in] cb  the called callback for returning
-                 * @param[in] _Tokenizer  the contained parsing rule element
-                 */
-                ReturnToCallback(CallBack cb, TokenizerInterface& tok)
-                    : cb(cb)
-                    , _Tokenizer(tok)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR11(ReturnToCallback, CallBack, cb);
 
             typedef While ZeroOrMore;
 
@@ -639,33 +461,58 @@ namespace xcore
              * fails
              * @endcode
              */
-            class Enclosed : public TokenizerInterface
-            {
-                TokenizerInterface& _Tokenizer;
-                StringReader        m_open;
-                StringReader        m_close;
-
-            public:
-                /*!
-                 * @fn 	Enclosed(Char* open, Char* close, const TokenizerInterface& tok)
-                 * Constructor to Extract class
-                 * @param[in] open the opening bracket
-                 * @param[in] close the closing bracket
-                 * @param[in] token the contained parsing rule element
-                 */
-                Enclosed(const char* open, const char* close, TokenizerInterface& token)
-                    : _Tokenizer(token)
-                    , m_open(open)
-                    , m_close(close)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            MANIPULATOR12(Enclosed, StringReader, m_open, StringReader, m_close);
 
         } // namespace Manipulators
 
         namespace Filters
         {
+
+#define FILTER1(_NAME_)                      \
+    class _NAME_ : public TokenizerInterface \
+    {                                        \
+    public:                                  \
+        _NAME_() {}                          \
+        virtual bool Check(StringReader&);   \
+    }
+
+#define FILTER11(_NAME_, _MTYPE1_, _MNAME1_)  \
+    class _NAME_ : public TokenizerInterface  \
+    {                                         \
+    private:                                  \
+        _MTYPE1_ _MNAME1_;                    \
+                                              \
+    public:                                   \
+        _NAME_(_MTYPE1_ m1) : _MNAME1_(m1) {} \
+        virtual bool Check(StringReader&);    \
+    }
+
+#define FILTER12(_NAME_, _MTYPE1_, _MNAME1_, _MTYPE2_, _MNAME2_)         \
+    class _NAME_ : public TokenizerInterface                             \
+    {                                                                    \
+    private:                                                             \
+        _MTYPE1_ _MNAME1_;                                               \
+        _MTYPE2_ _MNAME2_;                                               \
+                                                                         \
+    public:                                                              \
+        _NAME_(_MTYPE1_ m1, _MTYPE2_ m2) : _MNAME1_(m1), _MNAME2_(m2) {} \
+        virtual bool Check(StringReader&);                               \
+    }
+
+#define FILTERMM(_NAME_, _MTYPE_, _MIN_, _MAX_)                    \
+    class _NAME_ : public TokenizerInterface                       \
+    {                                                              \
+    private:                                                       \
+        _MTYPE_ _Min;                                              \
+        _MTYPE_ _Max;                                              \
+                                                                   \
+    public:                                                        \
+        _NAME_(_MTYPE_ min, _MTYPE_ max) : _Min(min), _Max(max) {} \
+        _NAME_(_MTYPE_ max) : _Min(_MIN_), _Max(max) {}            \
+        _NAME_() : _Min(_MIN_), _Max(_MAX_) {}                     \
+        virtual bool Check(StringReader&);                         \
+    }
+
             /*!
              * @class Any
              * @brief	matching element that matches any character (even null
@@ -677,13 +524,7 @@ namespace xcore
              * 		Any(); // "C" " " "#" OK ... never fails
              * @endcode
              */
-            class Any : public TokenizerInterface
-            {
-            public:
-                Any() {}
-                virtual bool Check(StringReader&);
-            };
-
+            FILTER1(Any);
             extern Any ANY;
 
             /*!
@@ -697,18 +538,7 @@ namespace xcore
              * 		In("ABC"); // "A" , "B" or "C" OK ... "D" fails
              * @endcode
              */
-            class In : public TokenizerInterface
-            {
-            private:
-                StringReader _Input;
-
-            public:
-                In(const char* str)
-                    : _Input(str)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            FILTER11(In, StringReader, _Input);
 
             /*!
              * @class Between
@@ -723,18 +553,8 @@ namespace xcore
              * 		Between('A','C'); // "A" , "B" or "C" OK ... "D" fails
              * @endcode
              */
-            class Between : public TokenizerInterface
-            {
-                uchar32 _Lower, _Upper;
+            FILTER12(Between, uchar32, _Lower, uchar32, _Upper);
 
-            public:
-                Between(uchar32 a, uchar32 b)
-                    : _Lower(a)
-                    , _Upper(b)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
             // TODO:class SmallLetter;
             // TODO:class CapitalLetter;
             // TODO:Class Letter;
@@ -750,14 +570,7 @@ namespace xcore
              * 		Alphabet() ; // "A" , "B" or "C" are OK ... "9" and "#" fail
              * @endcode
              */
-            class Alphabet : public TokenizerInterface
-            {
-
-            public:
-                Alphabet() {}
-                virtual bool Check(StringReader&);
-            };
-
+            FILTER1(Alphabet);
             extern Alphabet ALPHABET;
 
             /*!
@@ -771,15 +584,9 @@ namespace xcore
              * 		Digit() ; // "1" , "2" or "7" are OK ... "A" and "#" fail
              * @endcode
              */
-            class Digit : public TokenizerInterface
-            {
-
-            public:
-                Digit() {}
-                virtual bool Check(StringReader&);
-            };
-
+            FILTER1(Digit);
             extern Digit DIGIT;
+
             // Class Octal
             /*!
              * @class Hex
@@ -791,15 +598,9 @@ namespace xcore
              * 		Hex() ; // "1" , "A" or "7" are OK ... "G" and "#" fail
              * @endcode
              */
-            class Hex : public TokenizerInterface
-            {
-
-            public:
-                Hex() {}
-                virtual bool Check(StringReader&);
-            };
-
+            FILTER1(Hex);
             extern Hex HEX;
+
             /*!
              * @class AlphaNumeric
              * @brief	Checks if the character unnder processing is an alphabet letter
@@ -811,13 +612,7 @@ namespace xcore
              * 		AlphaNumeric() ; // "A" , "2" or "0" are OK ... " " and "#" fail
              * @endcode
              */
-            class AlphaNumeric : public TokenizerInterface
-            {
-            public:
-                AlphaNumeric() {}
-                virtual bool Check(StringReader&);
-            };
-
+            FILTER1(AlphaNumeric);
             extern AlphaNumeric ALPHANUMERIC;
 
             /*!
@@ -833,22 +628,7 @@ namespace xcore
              * 		Exact("ABC") ; // "ABC" is OK ... "abc" or anything else fails
              * @endcode
              */
-            class Exact : public TokenizerInterface
-            {
-                StringReader _Input;
-
-            public:
-                Exact(const char* str)
-                    : _Input(str)
-                {
-                }
-                Exact(StringReader const& str)
-                    : _Input(str)
-                {
-                }
-
-                virtual bool Check(StringReader&);
-            };
+            FILTER11(Exact, StringReader, _Input);
 
             /*!
              * @class Like
@@ -862,17 +642,8 @@ namespace xcore
              * 		Like("ABC") ; // "ABC" and "abc" are OK ... otherwise fails
              * @endcode
              */
-            class Like : public TokenizerInterface
-            {
-                StringReader _Input;
+            FILTER11(Like, StringReader, _Input);
 
-            public:
-                Like(const char* str)
-                    : _Input(str)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
             /*!
              * @class WhiteSpace
              * @brief	Checks if the character unnder processing is a whitespace,tab
@@ -885,12 +656,7 @@ namespace xcore
              * fail
              * @endcode
              */
-            class WhiteSpace : public TokenizerInterface
-            {
-            public:
-                WhiteSpace() {}
-                virtual bool Check(StringReader&);
-            };
+            FILTER1(WhiteSpace);
             extern WhiteSpace WHITESPACE;
 
             /*!
@@ -903,18 +669,7 @@ namespace xcore
              * 		Is('A') ; // "A" are OK ... "a" or anything else fails
              * @endcode
              */
-            class Is : public TokenizerInterface
-            {
-                uchar32 _Letter;
-
-            public:
-                Is(const uchar32 c)
-                    : _Letter(c)
-                {
-                }
-                // Is(const Char* s) :letter(s[0]) {}
-                virtual bool Check(StringReader&);
-            };
+            FILTER11(WhiteSpace, uchar32, _Letter);
 
             /*!
              * @class Decimal
@@ -928,13 +683,7 @@ namespace xcore
              * 		Decimal() ; // "1" and "12" are OK ... "A" "-1" fails
              * @endcode
              */
-            class Decimal : public TokenizerInterface
-            {
-
-            public:
-                Decimal() {}
-                virtual bool Check(StringReader&);
-            };
+            FILTER1(Decimal);
             extern Decimal DECIMAL;
 
             /*!
@@ -949,13 +698,7 @@ namespace xcore
              * 		Word() ; // "1" and "12" are OK ... "A" "-1" fails
              * @endcode
              */
-            class Word : public TokenizerInterface
-            {
-
-            public:
-                Word() {}
-                virtual bool Check(StringReader&);
-            };
+            FILTER1(Word);
             extern Word WORD;
 
             /*!
@@ -971,12 +714,7 @@ namespace xcore
              * end
              * @endcode
              */
-            class EndOfText : public TokenizerInterface
-            {
-            public:
-                EndOfText() {}
-                virtual bool Check(StringReader&);
-            };
+            FILTER1(EndOfText);
             extern EndOfText EOT;
 
             /*!
@@ -986,12 +724,7 @@ namespace xcore
              *          Is('\\n') on Mac/Linux
              *
              */
-            class EndOfLine : public TokenizerInterface
-            {
-            public:
-                EndOfLine() {}
-                virtual bool Check(StringReader&);
-            };
+            FILTER1(EndOfLine);
             extern EndOfLine EOL;
 
             /*!
@@ -1007,29 +740,7 @@ namespace xcore
              * @endcode
              */
 
-            class Integer : public TokenizerInterface
-            {
-                s32 _Min, _Max;
-
-            public:
-                Integer(s32 min, s32 max)
-                    : _Min(min)
-                    , _Max(max)
-                {
-                }
-                Integer(s32 max)
-                    : _Min(0)
-                    , _Max(max)
-                {
-                }
-                Integer()
-                    : _Min(0)
-                    , _Max(0x7fffffff)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
-
+            FILTERMM(Integer, s32, 0, 0x7fffffff);
             /*!
              * @class Float
              * @brief	this is more intellegent matching pattern ...
@@ -1043,28 +754,7 @@ namespace xcore
              * or "16.3" fail
              * @endcode
              */
-            class Float : public TokenizerInterface
-            {
-                f32 _Min, _Max;
-
-            public:
-                Float(f32 min, f32 max)
-                    : _Min(min)
-                    , _Max(max)
-                {
-                }
-                Float(f32 max)
-                    : _Min(0.0f)
-                    , _Max(max)
-                {
-                }
-                Float()
-                    : _Min(0.0f)
-                    , _Max(3.402823e+38f)
-                {
-                }
-                virtual bool Check(StringReader&);
-            };
+            FILTERMM(Integer, f32, 0.0f, 3.402823e+38f);
             // namespace Date
 
         } // namespace Filters
@@ -1075,6 +765,13 @@ namespace xcore
          */
         namespace Utils
         {
+
+#define UTIL1(_NAME_)                        \
+    class _NAME_ : public TokenizerInterface \
+    {                                        \
+    public:                                  \
+        virtual bool Check(StringReader&);   \
+    }
             /*!
              * @struct Range
              * @brief	Range
@@ -1082,13 +779,8 @@ namespace xcore
              */
             typedef struct Range
             {
-                s32 Minimum;
-                s32 Maximum;
-                Range(s32 min, s32 max)
-                    : Minimum(min)
-                    , Maximum(max)
-                {
-                }
+                s32 _Min, _Max;
+                Range(s32 min, s32 max) : _Min(min), _Max(max) {}
             } R;
 
             /*!
@@ -1097,11 +789,7 @@ namespace xcore
              * 			(aaa.bbb.ccc.ddd)
              *
              */
-            class IPv4 : public TokenizerInterface
-            {
-            public:
-                virtual bool Check(StringReader&);
-            };
+            UTIL1(IPv4);
             extern IPv4 IPV4;
 
             /*!
@@ -1110,12 +798,7 @@ namespace xcore
              * 			(server.domain.com) (127.0.0.1)
              *
              */
-            class Host : public TokenizerInterface
-            {
-            public:
-                virtual bool Check(StringReader&);
-            };
-
+            UTIL1(Host);
             extern Host HOST;
 
             /*!
@@ -1124,11 +807,7 @@ namespace xcore
              * 			(abc@host.com)
              *
              */
-            class Email : public TokenizerInterface
-            {
-            public:
-                virtual bool Check(StringReader&);
-            };
+            UTIL1(Email);
             extern Email EMAIL;
 
             /*!
@@ -1137,11 +816,7 @@ namespace xcore
              * 			(+(123)555 443 2 22)
              *
              */
-            class Phone : public TokenizerInterface
-            {
-            public:
-                virtual bool Check(StringReader&);
-            };
+            UTIL1(Phone);
             extern Phone PHONE;
 
             /*!
@@ -1150,11 +825,7 @@ namespace xcore
              * 			(host@domain.com:12345)
              *
              */
-            class ServerAddress : public TokenizerInterface
-            {
-            public:
-                virtual bool Check(StringReader&);
-            };
+            UTIL1(ServerAddress);
             extern ServerAddress SERVERADDRESS;
 
             /*!
@@ -1163,11 +834,7 @@ namespace xcore
              * 			(proto:abc@host.domain.com:4444)
              *
              */
-            class Uri : public TokenizerInterface
-            {
-            public:
-                virtual bool Check(StringReader&);
-            };
+            UTIL1(Uri);
             extern Uri URI;
 
         } // namespace Utils
@@ -1206,23 +873,23 @@ namespace xcore
         return xcore::xparser::Manipulators::Within(range.Minimum, range.Maximum, tok);
     }
 
-    inline xcore::xparser::Manipulators::Or operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
-    {
-        return xcore::xparser::Manipulators::Or(t1, t2);
-    }
+    inline xcore::xparser::Manipulators::Or operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Or(t1, t2); }
 
-    inline xcore::xparser::Manipulators::And operator&(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
-    {
-        return xcore::xparser::Manipulators::And(t1, t2);
-    }
+    inline xcore::xparser::Manipulators::And operator&(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::And(t1, t2); }
 
-    inline xcore::xparser::Manipulators::Sequence operator+(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
-    {
-        return xcore::xparser::Manipulators::Sequence(t1, t2);
-    }
+    inline xcore::xparser::Manipulators::Sequence operator+(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Sequence(t1, t2); }
 
     inline xcore::xparser::Manipulators::Not operator!(xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Not(tok); }
 
 } // namespace xcore
 
-#endif
+#endifline xcore::xparser::Manipulators::Sequence operator+ (xcore::xparser::TokenizerInterface & t1, xcore::xparser::TokenizerInterface & t2){return xcore::xparser::Manipulators::Sequence(t1, t2); }
+
+inline xcore::xparser::Manipulators::Not operator!(xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Not(tok); }
+inline xcore::xparser::Manipulators::Or  operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Or(t1, t2); }
+
+inline xcore::xparser::Manipulators::And operator&(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::And(t1, t2); }
+
+inline xcore::xparser::Manipulators::Sequence operator+(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Sequence(t1, t2); }
+
+inline xcore::xparser::Manipulators::Not operator!(xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Not(tok); }

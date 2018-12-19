@@ -1,9 +1,4 @@
 #include "xtext/x_parser.h"
-#include <stdlib.h>
-
-using namespace xcore::xparser::Manipulators;
-using namespace xcore::xparser::Filters;
-using namespace xcore::xparser::Utils;
 
 namespace xcore
 {
@@ -16,31 +11,25 @@ namespace xcore
         UTF32 = 4
     };
 
-    charreader::charreader()
-        : m_type(ASCII)
-    {
-    }
-    charreader::charreader(const char* str)
-        : m_type(ASCII)
+    charreader::charreader() : m_type(ASCII) {}
+    
+    charreader::charreader(const char* str) : m_type(ASCII)
     {
         if (str != nullptr)
         {
             m_runes._ascii = ascii::crunes(str);
         }
     }
-    charreader::charreader(utf32::pcrune str)
-        : m_type(UTF32)
+
+    charreader::charreader(utf32::pcrune str) : m_type(UTF32)
     {
         if (str != nullptr)
         {
             m_runes._utf32 = utf32::crunes(str);
         }
     }
-    charreader::charreader(const charreader& t)
-        : m_type(t.m_type)
-    {
-        m_runes._ascii = t.m_runes._ascii;
-    }
+    
+    charreader::charreader(const charreader& t) : m_type(t.m_type) { m_runes._ascii = t.m_runes._ascii; }
 
     s64 charreader::size() const
     {
@@ -154,20 +143,11 @@ namespace xcore
         return true;
     }
 
-    StringReader::StringReader()
-        : m_str()
-    {
-    }
+    StringReader::StringReader() : m_str() {}
 
-    StringReader::StringReader(const char* str)
-        : m_str(str)
-    {
-    }
+    StringReader::StringReader(const char* str) : m_str(str) {}
 
-    StringReader::StringReader(const StringReader& chars)
-        : m_str(chars.m_str)
-    {
-    }
+    StringReader::StringReader(const StringReader& chars) : m_str(chars.m_str) {}
 
     StringReader::StringReader(const StringReader& begin, const StringReader& until) { m_str.select(begin.m_str, until.m_str); }
 
@@ -522,15 +502,12 @@ namespace xcore
 
         namespace Utils
         {
-            bool IPv4::Check(StringReader& _Stream)
-            {
-                return (3 * ((Within(1, 3, DIGIT) & Integer(255)) + Is(('.'))) + (Within(1, 3, DIGIT) & Filters::Integer(255))).Check(_Stream);
-            }
+            bool IPv4::Check(StringReader& _Stream) { return (3 * ((Within(1, 3, DIGIT) & Integer(255)) + Is(('.'))) + (Within(1, 3, DIGIT) & Filters::Integer(255))).Check(_Stream); }
 
             bool Host::Check(StringReader& _Stream)
             {
-                return (IPV4 | (OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)) +
-                                ZeroOrMore(Is(('.')) + OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)))))
+                return (IPV4 |
+                        (OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)) + ZeroOrMore(Is(('.')) + OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)))))
                     .Check(_Stream);
             }
 
@@ -541,8 +518,7 @@ namespace xcore
 
             bool Phone::Check(StringReader& _Stream)
             {
-                return (ZeroOrMore(Is(('+'))) + (ZeroOrMore(Is(('(')) + OneOrMore(DIGIT) + Is((')'))) + ZeroOrMore(WHITESPACE)) + OneOrMore(DIGIT) +
-                        ZeroOrMore(In((" -")) + OneOrMore(DIGIT)))
+                return (ZeroOrMore(Is(('+'))) + (ZeroOrMore(Is(('(')) + OneOrMore(DIGIT) + Is((')'))) + ZeroOrMore(WHITESPACE)) + OneOrMore(DIGIT) + ZeroOrMore(In((" -")) + OneOrMore(DIGIT)))
                     .Check(_Stream);
             }
 
@@ -550,8 +526,8 @@ namespace xcore
 
             bool Uri::Check(StringReader& _Stream)
             {
-                return (OneOrMore(ALPHANUMERIC) + Is((':')) +
-                        (OneOrMore(ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))) + ZeroOrMore(Is('.') + (ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))))) + Is(('@')) + SERVERADDRESS)
+                return (OneOrMore(ALPHANUMERIC) + Is((':')) + (OneOrMore(ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))) + ZeroOrMore(Is('.') + (ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))))) + Is(('@')) +
+                        SERVERADDRESS)
                     .Check(_Stream);
             }
         } // namespace Utils
