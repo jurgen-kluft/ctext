@@ -277,7 +277,7 @@ namespace xcore
                 u64 i = 0;
                 for (; i < _Max; i++)
                 {
-                    if (!_Tokenizer.Check(_Start))
+                    if (!_TokenizerA.Check(_Start))
                         break;
                 }
 
@@ -290,7 +290,7 @@ namespace xcore
                 return false;
             }
 
-            bool Times::Check(StringReader& _Stream) { return Within(_Max, _Max, _Tokenizer).Check(_Stream); }
+            bool Times::Check(StringReader& _Stream) { return Within(_Max, _Max, _TokenizerA).Check(_Stream); }
 
             bool OneOrMore::Check(StringReader& _Stream) { return Within(1, -1, _Tokenizer).Check(_Stream); }
 
@@ -304,7 +304,7 @@ namespace xcore
             {
                 StringReader _Start = _Stream;
 
-                bool _Result = _Tokenizer.Check(_Start);
+                bool _Result = _TokenizerA.Check(_Start);
                 _Selection   = StringReader(_Start, _Stream);
 
                 _Stream = _Start;
@@ -314,7 +314,7 @@ namespace xcore
             bool ReturnToCallback::Check(StringReader& _Stream)
             {
                 StringReader _Start  = _Stream;
-                bool         _Result = _Tokenizer.Check(_Start);
+                bool         _Result = _TokenizerA.Check(_Start);
 
                 StringReader output = StringReader(_Start, _Stream);
                 cb(output);
@@ -323,7 +323,7 @@ namespace xcore
                 return _Result;
             }
 
-            bool Enclosed::Check(StringReader& _Stream) { return (Filters::Exact(m_open) + _Tokenizer + Filters::Exact(m_close)).Check(_Stream); }
+            bool Enclosed::Check(StringReader& _Stream) { return (Filters::Exact(m_open) + _TokenizerA + Filters::Exact(m_close)).Check(_Stream); }
         } // namespace Manipulators
 
         namespace Filters
@@ -420,9 +420,9 @@ namespace xcore
                 return false;
             }
 
-            bool Decimal::Check(StringReader& _Stream) { return OneOrMore(DIGIT).Check(_Stream); }
+            bool Decimal::Check(StringReader& _Stream) { return Manipulators::OneOrMore(DIGIT).Check(_Stream); }
 
-            bool Word::Check(StringReader& _Stream) { return OneOrMore(ALPHABET).Check(_Stream); }
+            bool Word::Check(StringReader& _Stream) { return Manipulators::OneOrMore(ALPHABET).Check(_Stream); }
 
             bool EndOfText::Check(StringReader& _Stream) { return (_Stream.Peek() == ('\0')); }
 
@@ -502,6 +502,9 @@ namespace xcore
 
         namespace Utils
         {
+			using namespace Manipulators;
+			using namespace Filters;
+
             bool IPv4::Check(StringReader& _Stream) { return (3 * ((Within(1, 3, DIGIT) & Integer(255)) + Is(('.'))) + (Within(1, 3, DIGIT) & Filters::Integer(255))).Check(_Stream); }
 
             bool Host::Check(StringReader& _Stream)
@@ -553,11 +556,11 @@ namespace xcore
         return _Result;
     }
 
-    bool StringProcessor::Validate(TokenizerInterface& tok) { return (tok + EndOfText()).Check(_Cursor); }
+    bool StringProcessor::Validate(TokenizerInterface& tok) { return (tok + Filters::EndOfText()).Check(_Cursor); }
 
     StringReader StringProcessor::Search(TokenizerInterface& tok)
     {
-        bool _Result = (Until(EOT | tok)).Check(_Cursor);
+        bool _Result = (Manipulators::Until(Filters::EOT | tok)).Check(_Cursor);
         if (_Result && _Cursor.Valid())
         {
             StringReader _Start = _Cursor;

@@ -13,7 +13,7 @@ namespace xcore
     // Actually this can totally replace the runes/crunes everywhere.
     // Even for console, we can pass this charreader and literally use
     // any string format, from ascii, utf16 ....
-    // 
+    //
     class charreader;
 
     class charwriter
@@ -22,10 +22,10 @@ namespace xcore
         charwriter();
         charwriter(char* str, char* end);
         charwriter(utf32::prune str, utf32::prune end);
-        charreader(ascii::runes const& str);
-        charreader(utf8::runes const& str);
-        charreader(utf16::runes const& str);
-        charreader(utf32::runes const& str);
+        charwriter(ascii::runes const& str);
+        charwriter(utf8::runes const& str);
+        charwriter(utf16::runes const& str);
+        charwriter(utf32::runes const& str);
         charwriter(const charwriter&);
 
         void reset();
@@ -41,14 +41,17 @@ namespace xcore
         bool operator!=(const charwriter& t) const;
 
         union runes {
-            inline runes() : _ascii() {}
+            inline runes()
+                : _ascii()
+            {
+            }
             ascii::runes _ascii;
             utf8::runes  _utf8;
             utf16::runes _utf16;
             utf32::runes _utf32;
         };
-        runes  m_runes;
-        s32    m_type;
+        runes m_runes;
+        s32   m_type;
     };
 
     class charreader
@@ -81,7 +84,10 @@ namespace xcore
         bool        operator!=(const charreader& t) const;
 
         union crunes {
-            inline crunes() : _ascii() {}
+            inline crunes()
+                : _ascii()
+            {
+            }
             ascii::crunes _ascii;
             utf8::crunes  _utf8;
             utf16::crunes _utf16;
@@ -145,6 +151,8 @@ namespace xcore
             virtual bool Check(StringReader&) = 0;
         };
 
+		#include "xtext/private/x_parser_defines.h"
+
         /*!
          * @class RulesSet
          * @brief a generic container for all types of parsing elements ..
@@ -163,54 +171,6 @@ namespace xcore
          */
         namespace Manipulators
         {
-
-#define MANIPULATOR1(_NAME_)                                 \
-    class _NAME_ : public TokenizerInterface                 \
-    {                                                        \
-    private:                                                 \
-        TokenizerInterface& _Tokenizer;                      \
-                                                             \
-    public:                                                  \
-        _NAME_(TokenizerInterface& tok) : _Tokenizer(tok) {} \
-        virtual bool Check(StringReader&);                   \
-    }
-#define MANIPULATOR2(_NAME_)                                                                                 \
-    class _NAME_ : public TokenizerInterface                                                                 \
-    {                                                                                                        \
-    private:                                                                                                 \
-        TokenizerInterface& _TokenizerA;                                                                     \
-        TokenizerInterface& _TokenizerB;                                                                     \
-                                                                                                             \
-    public:                                                                                                  \
-        _NAME_(TokenizerInterface& toka, TokenizerInterface& tokb) : _TokenizerA(toka), _TokenizerB(tokb) {} \
-        virtual bool Check(StringReader&);                                                                   \
-    }
-
-#define MANIPULATOR11(_NAME_, _MTYPE1_, _MNAME1_)                                          \
-    class _NAME_ : public TokenizerInterface                                               \
-    {                                                                                      \
-    private:                                                                               \
-        _MTYPE1_            _MNAME_1;                                                      \
-        TokenizerInterface& _TokenizerA;                                                   \
-                                                                                           \
-    public:                                                                                \
-        _NAME_(_MTYPE1_ m1, TokenizerInterface& toka) : _MNAME_1(m1), _TokenizerA(toka) {} \
-        virtual bool Check(StringReader&);                                                 \
-    }
-
-#define MANIPULATOR12(_NAME_, _MTYPE1_, _MNAME1_, _MTYPE2_, _MNAME2_)                                                 \
-    class _NAME_ : public TokenizerInterface                                                                          \
-    {                                                                                                                 \
-    private:                                                                                                          \
-        _MTYPE1_            _MNAME_1;                                                                                 \
-        _MTYPE2_            _MNAME_2;                                                                                 \
-        TokenizerInterface& _TokenizerA;                                                                              \
-                                                                                                                      \
-    public:                                                                                                           \
-        _NAME_(_MTYPE1_ m1, _MTYPE2_ m2, TokenizerInterface& toka) : _MNAME_1(m1), _MNAME_2(m2), _TokenizerA(toka) {} \
-        virtual bool Check(StringReader&);                                                                            \
-    }
-
             /*!
              * @class Not
              * @brief it is a negating effect parsing element. it turns the parsing process
@@ -316,7 +276,7 @@ namespace xcore
              * @see 	Times, While, Until, OneOrMore, ZeroOrOne, Filters::Exact
              * 		, Sequence
              */
-            MANIPULATOR12(Within, u64, _Min, u64, _Max);
+            MANIPULATOR_MINMAX(Within, u64, 0, 0xffffffffffffffffUL);
 
             /*!
              * @class Times
@@ -370,17 +330,8 @@ namespace xcore
              * @see 	Times, While, Until, ZeroOrOne, Filters::Exact
              * 		, Sequence
              */
-            MANIPULATOR1(ZeroOrMore);
-
-            /*!
-             * @class Optional
-             * @brief	see ZeroOrOne
-             */
+            MANIPULATOR1(ZeroOrOne);
             typedef ZeroOrOne Optional;
-            /*!
-             * @class _0Or1
-             * @brief	see ZeroOrOne
-             */
             typedef ZeroOrOne _0Or1;
 
             /*!
@@ -400,6 +351,7 @@ namespace xcore
              * 		, Sequence
              */
             MANIPULATOR1(While);
+            typedef While ZeroOrMore;
 
             /*!
              * @class Until
@@ -428,7 +380,7 @@ namespace xcore
              * 		Extract(buffer,Is('C')) ; // if "C" .. buffer = "C"
              * @endcode
              */
-            MANIPULATOR11(Within, StringReader&, _Selection);
+            MANIPULATOR11(Extract, StringReader&, _Selection);
 
             /*!
              * @class ReturnToCallback
@@ -446,9 +398,8 @@ namespace xcore
              * 		ReturnToCallback(callback,Is('C')) ; //
              * @endcode
              */
+            typedef void (*CallBack)(StringReader&);
             MANIPULATOR11(ReturnToCallback, CallBack, cb);
-
-            typedef While ZeroOrMore;
 
             /*!
              * @class Enclosed
@@ -467,52 +418,6 @@ namespace xcore
 
         namespace Filters
         {
-
-#define FILTER1(_NAME_)                      \
-    class _NAME_ : public TokenizerInterface \
-    {                                        \
-    public:                                  \
-        _NAME_() {}                          \
-        virtual bool Check(StringReader&);   \
-    }
-
-#define FILTER11(_NAME_, _MTYPE1_, _MNAME1_)  \
-    class _NAME_ : public TokenizerInterface  \
-    {                                         \
-    private:                                  \
-        _MTYPE1_ _MNAME1_;                    \
-                                              \
-    public:                                   \
-        _NAME_(_MTYPE1_ m1) : _MNAME1_(m1) {} \
-        virtual bool Check(StringReader&);    \
-    }
-
-#define FILTER12(_NAME_, _MTYPE1_, _MNAME1_, _MTYPE2_, _MNAME2_)         \
-    class _NAME_ : public TokenizerInterface                             \
-    {                                                                    \
-    private:                                                             \
-        _MTYPE1_ _MNAME1_;                                               \
-        _MTYPE2_ _MNAME2_;                                               \
-                                                                         \
-    public:                                                              \
-        _NAME_(_MTYPE1_ m1, _MTYPE2_ m2) : _MNAME1_(m1), _MNAME2_(m2) {} \
-        virtual bool Check(StringReader&);                               \
-    }
-
-#define FILTERMM(_NAME_, _MTYPE_, _MIN_, _MAX_)                    \
-    class _NAME_ : public TokenizerInterface                       \
-    {                                                              \
-    private:                                                       \
-        _MTYPE_ _Min;                                              \
-        _MTYPE_ _Max;                                              \
-                                                                   \
-    public:                                                        \
-        _NAME_(_MTYPE_ min, _MTYPE_ max) : _Min(min), _Max(max) {} \
-        _NAME_(_MTYPE_ max) : _Min(_MIN_), _Max(max) {}            \
-        _NAME_() : _Min(_MIN_), _Max(_MAX_) {}                     \
-        virtual bool Check(StringReader&);                         \
-    }
-
             /*!
              * @class Any
              * @brief	matching element that matches any character (even null
@@ -669,7 +574,7 @@ namespace xcore
              * 		Is('A') ; // "A" are OK ... "a" or anything else fails
              * @endcode
              */
-            FILTER11(WhiteSpace, uchar32, _Letter);
+            FILTER11(Is, uchar32, _Letter);
 
             /*!
              * @class Decimal
@@ -740,7 +645,7 @@ namespace xcore
              * @endcode
              */
 
-            FILTERMM(Integer, s32, 0, 0x7fffffff);
+            FILTER_MINMAX(Integer, s32, 0, 0x7fffffff);
             /*!
              * @class Float
              * @brief	this is more intellegent matching pattern ...
@@ -754,10 +659,11 @@ namespace xcore
              * or "16.3" fail
              * @endcode
              */
-            FILTERMM(Integer, f32, 0.0f, 3.402823e+38f);
+            FILTER_MINMAX(Float, f32, 0.0f, 3.402823e+38f);
             // namespace Date
 
         } // namespace Filters
+
         /*!
          * @namespace 	Utils
          * @brief 		more comprehensive matching pattern elements that are
@@ -765,13 +671,6 @@ namespace xcore
          */
         namespace Utils
         {
-
-#define UTIL1(_NAME_)                        \
-    class _NAME_ : public TokenizerInterface \
-    {                                        \
-    public:                                  \
-        virtual bool Check(StringReader&);   \
-    }
             /*!
              * @struct Range
              * @brief	Range
@@ -780,7 +679,11 @@ namespace xcore
             typedef struct Range
             {
                 s32 _Min, _Max;
-                Range(s32 min, s32 max) : _Min(min), _Max(max) {}
+                Range(s32 min, s32 max)
+                    : _Min(min)
+                    , _Max(max)
+                {
+                }
             } R;
 
             /*!
@@ -865,12 +768,12 @@ namespace xcore
 
     inline xcore::xparser::Manipulators::Within operator*(xcore::xparser::TokenizerInterface& tok, const xcore::xparser::Utils::Range& range)
     {
-        return xcore::xparser::Manipulators::Within(range.Minimum, range.Maximum, tok);
+        return xcore::xparser::Manipulators::Within(range._Min, range._Max, tok);
     }
 
     inline xcore::xparser::Manipulators::Within operator*(xcore::xparser::Utils::Range& range, xcore::xparser::TokenizerInterface& tok)
     {
-        return xcore::xparser::Manipulators::Within(range.Minimum, range.Maximum, tok);
+        return xcore::xparser::Manipulators::Within(range._Min, range._Max, tok);
     }
 
     inline xcore::xparser::Manipulators::Or operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Or(t1, t2); }
@@ -883,13 +786,4 @@ namespace xcore
 
 } // namespace xcore
 
-#endifline xcore::xparser::Manipulators::Sequence operator+ (xcore::xparser::TokenizerInterface & t1, xcore::xparser::TokenizerInterface & t2){return xcore::xparser::Manipulators::Sequence(t1, t2); }
-
-inline xcore::xparser::Manipulators::Not operator!(xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Not(tok); }
-inline xcore::xparser::Manipulators::Or  operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Or(t1, t2); }
-
-inline xcore::xparser::Manipulators::And operator&(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::And(t1, t2); }
-
-inline xcore::xparser::Manipulators::Sequence operator+(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Sequence(t1, t2); }
-
-inline xcore::xparser::Manipulators::Not operator!(xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Not(tok); }
+#endif
