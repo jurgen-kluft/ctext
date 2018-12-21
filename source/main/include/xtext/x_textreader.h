@@ -7,9 +7,8 @@
 
 #include "xstring/x_string.h"
 
-namespace xtext
+namespace xcore
 {
-
     class xtextreader
     {
     public:
