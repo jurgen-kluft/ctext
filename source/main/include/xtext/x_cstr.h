@@ -12,11 +12,21 @@ namespace xcore
     // A non-dynamic xstr (ascii or utf-32)  with a similar API as 'xstring'
 	class xstr
 	{
+	protected:
+		struct data;
+		struct range
+		{
+			inline range() : from(0), to(0) { }
+			inline range(s32 f, s32 t) : from(f), to(t) { }
+			inline s32 size() const { return to - from; }
+			s32 from, to;
+		};
 	public:
 		xstr();
 		xstr(char* str, char* end, char* eos);
 		xstr(const char* str, const char* end = nullptr);
 		xstr(xstr const& other);
+		xstr(xstr::view const& left, xstr::view const& right);
 		~xstr();
 
 		struct view
@@ -45,19 +55,16 @@ namespace xcore
 			friend class xview;
 			view(data*);
 
-			void		  add();
-			void		  rem();
-			void		  invalidate();
+			void	add();
+			void	rem();
+			void	invalidate();
 
-		    data*          m_data;
-			s32			   m_from;
-			s32			   m_size;
+		    data*   m_data;
+			range	m_view;
 
-			view*		   m_next;
-			view*		   m_prev;
+			view*	m_next;
+			view*	m_prev;
 		};
-
-		xstr(xstr::view const& left, xstr::view const& right);
 
 		bool is_empty() const;
 		s32  cap() const;
@@ -88,7 +95,9 @@ namespace xcore
 		void	to_utf16(xstr16& str) const;
 
 	protected:
+		friend struct view;
 		friend class xview;
+
 		void release();
 
         struct data
