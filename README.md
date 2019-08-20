@@ -6,13 +6,13 @@
 
 It will also consider BOM:
 
-Bytes       | Utf    | Endian
------------ | ------ | -------------
-00 00 FE FF | UTF-32 | big-endian
-FF FE 00 00 | UTF-32 | little-endian
-FE FF       | UTF-16 | big-endian
-FF FE       | UTF-16 | little-endian
-EF BB BF    | UTF-8  | na
+| Bytes       | Utf    | Endian        |
+| ----------- | ------ | ------------- |
+| 00 00 FE FF | UTF-32 | big-endian    |
+| FF FE 00 00 | UTF-32 | little-endian |
+| FE FF       | UTF-16 | big-endian    |
+| FF FE       | UTF-16 | little-endian |
+| EF BB BF    | UTF-8  | na            |
 
 ## Warning, below are just wild thoughts, nothing concrete
 
@@ -52,7 +52,7 @@ struct item
         p.reset("\n", &s.lor);
     }
 
-    void    parse(parser& p, state& s)
+    void    parse_event(parser& p, state& s)
     {
         // This function is called whenever one of the above 'events' happen.
         // So lets say the input text is 5 lines like this:
