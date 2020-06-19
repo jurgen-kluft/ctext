@@ -40,7 +40,8 @@ namespace xcore
         bool operator==(const charwriter& t) const;
         bool operator!=(const charwriter& t) const;
 
-        union runes {
+        union runes
+        {
             inline runes()
                 : _ascii()
             {
@@ -83,7 +84,8 @@ namespace xcore
         bool        operator==(const charreader& t) const;
         bool        operator!=(const charreader& t) const;
 
-        union crunes {
+        union crunes
+        {
             inline crunes()
                 : _ascii()
             {
@@ -151,7 +153,7 @@ namespace xcore
             virtual bool Check(StringReader&) = 0;
         };
 
-		#include "xtext/private/x_parser_defines.h"
+#include "xtext/private/x_parser_defines.h"
 
         /*!
          * @class RulesSet
@@ -762,26 +764,29 @@ namespace xcore
         void         Reset();
     };
 
-    inline xcore::xparser::Manipulators::Times operator*(xcore::xparser::TokenizerInterface& tok, s32 times) { return xcore::xparser::Manipulators::Times(times, tok); }
-
-    inline xcore::xparser::Manipulators::Times operator*(s32 times, xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Times(times, tok); }
-
+    inline xcore::xparser::Manipulators::Times  operator*(xcore::xparser::TokenizerInterface& tok, s32 times) { return xcore::xparser::Manipulators::Times(times, tok); }
+    inline xcore::xparser::Manipulators::Times  operator*(s32 times, xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Times(times, tok); }
     inline xcore::xparser::Manipulators::Within operator*(xcore::xparser::TokenizerInterface& tok, const xcore::xparser::Utils::Range& range)
     {
         return xcore::xparser::Manipulators::Within(range._Min, range._Max, tok);
     }
-
     inline xcore::xparser::Manipulators::Within operator*(xcore::xparser::Utils::Range& range, xcore::xparser::TokenizerInterface& tok)
     {
         return xcore::xparser::Manipulators::Within(range._Min, range._Max, tok);
     }
 
-    inline xcore::xparser::Manipulators::Or operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Or(t1, t2); }
-
-    inline xcore::xparser::Manipulators::And operator&(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::And(t1, t2); }
-
-    inline xcore::xparser::Manipulators::Sequence operator+(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2) { return xcore::xparser::Manipulators::Sequence(t1, t2); }
-
+    inline xcore::xparser::Manipulators::Or operator|(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
+    {
+        return xcore::xparser::Manipulators::Or(t1, t2);
+    }
+    inline xcore::xparser::Manipulators::And operator&(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
+    {
+        return xcore::xparser::Manipulators::And(t1, t2);
+    }
+    inline xcore::xparser::Manipulators::Sequence operator+(xcore::xparser::TokenizerInterface& t1, xcore::xparser::TokenizerInterface& t2)
+    {
+        return xcore::xparser::Manipulators::Sequence(t1, t2);
+    }
     inline xcore::xparser::Manipulators::Not operator!(xcore::xparser::TokenizerInterface& tok) { return xcore::xparser::Manipulators::Not(tok); }
 
 } // namespace xcore
