@@ -31,28 +31,29 @@ struct item
 {
     u64     m_left;
     u64     m_right;
+    state   m_state;
 
-    void    parse_setup(parser& p, state& s)
+    void    parse_setup(parser& p)
     {
         // Character conversion
         p.convert('.', '0');
         p.convert('#', '1');
 
         // Counters
-        p.counter("0", &s.chr);
-        p.counter("1", &s.chr);
-        p.counter("/", &s.row);
-        p.counter("=>", &s.lor);
-        p.counter("\n", &s.line);
+        p.counter("0", &m_state.chr);
+        p.counter("1", &m_state.chr);
+        p.counter("/", &m_state.row);
+        p.counter("=>", &m_state.lor);
+        p.counter("\n", &m_state.line);
 
         // Resets
-        p.reset("/", &s.chr);
-        p.reset("=>", &s.row);
-        p.reset("\n", &s.row);
-        p.reset("\n", &s.lor);
+        p.reset("/", &m_state.chr);
+        p.reset("=>", &m_state.row);
+        p.reset("\n", &m_state.row);
+        p.reset("\n", &m_state.lor);
     }
 
-    void    parse_event(parser& p, state& s)
+    void    parse_event(parser& p)
     {
         // This function is called whenever one of the above 'events' happen.
         // So lets say the input text is 5 lines like this:
