@@ -12,7 +12,7 @@ namespace xcore
     };
 
     charreader::charreader() : m_type(ASCII) {}
-    
+
     charreader::charreader(const char* str) : m_type(ASCII)
     {
         if (str != nullptr)
@@ -28,7 +28,7 @@ namespace xcore
             m_runes._utf32 = utf32::crunes(str);
         }
     }
-    
+
     charreader::charreader(const charreader& t) : m_type(t.m_type) { m_runes._ascii = t.m_runes._ascii; }
 
     s64 charreader::size() const
@@ -102,13 +102,9 @@ namespace xcore
     }
 
     bool charreader::operator<(const charreader& t) const { return m_runes._ascii.m_cur < t.m_runes._ascii.m_cur; }
-
     bool charreader::operator>(const charreader& t) const { return m_runes._ascii.m_cur > t.m_runes._ascii.m_cur; }
-
     bool charreader::operator<=(const charreader& t) const { return m_runes._ascii.m_cur <= t.m_runes._ascii.m_cur; }
-
     bool charreader::operator>=(const charreader& t) const { return m_runes._ascii.m_cur >= t.m_runes._ascii.m_cur; }
-
     bool charreader::operator==(const charreader& t) const
     {
         if (t.m_type == m_type)
@@ -143,39 +139,25 @@ namespace xcore
         return true;
     }
 
-    StringReader::StringReader() : m_str() {}
+    stringreader::stringreader() : m_str() {}
+    stringreader::stringreader(const char* str) : m_str(str) {}
+    stringreader::stringreader(const stringreader& chars) : m_str(chars.m_str) {}
+    stringreader::stringreader(const stringreader& begin, const stringreader& until) { m_str.select(begin.m_str, until.m_str); }
 
-    StringReader::StringReader(const char* str) : m_str(str) {}
+    s64     stringreader::Size() const { return m_str.size(); }
+    void    stringreader::Reset() { m_str.reset(); }
+    uchar32 stringreader::Read() { return m_str.read(); }
+    uchar32 stringreader::Peek() const { return m_str.peek(); }
+    void    stringreader::Select(const stringreader& begin, const stringreader& cursor) { m_str.select(begin.m_str, cursor.m_str); }
+    bool    stringreader::Valid() const { return m_str.valid(); }
+    void    stringreader::Skip() { m_str.skip(); }
+    void    stringreader::Write(StringWriter& writer) {}
 
-    StringReader::StringReader(const StringReader& chars) : m_str(chars.m_str) {}
-
-    StringReader::StringReader(const StringReader& begin, const StringReader& until) { m_str.select(begin.m_str, until.m_str); }
-
-    s64 StringReader::Size() const { return m_str.size(); }
-
-    void StringReader::Reset() { m_str.reset(); }
-
-    uchar32 StringReader::Read() { return m_str.read(); }
-
-    uchar32 StringReader::Peek() const { return m_str.peek(); }
-
-    void StringReader::Select(const StringReader& begin, const StringReader& cursor) { m_str.select(begin.m_str, cursor.m_str); }
-
-    bool StringReader::Valid() const { return m_str.valid(); }
-
-    void StringReader::Skip() { m_str.skip(); }
-
-    void StringReader::Write(StringWriter& writer) {}
-
-    bool StringReader::operator<(const StringReader&) const { return false; }
-
-    bool StringReader::operator>(const StringReader&) const { return false; }
-
-    bool StringReader::operator<=(const StringReader&) const { return false; }
-
-    bool StringReader::operator>=(const StringReader&) const { return false; }
-
-    bool StringReader::operator==(const StringReader& r) const
+    bool stringreader::operator<(const stringreader&) const { return false; }
+    bool stringreader::operator>(const stringreader&) const { return false; }
+    bool stringreader::operator<=(const stringreader&) const { return false; }
+    bool stringreader::operator>=(const stringreader&) const { return false; }
+    bool stringreader::operator==(const stringreader& r) const
     {
         if (Size() == r.Size())
         {
@@ -184,171 +166,167 @@ namespace xcore
         return false;
     }
 
-    bool StringReader::operator!=(const StringReader&) const { return false; }
+    bool stringreader::operator!=(const stringreader&) const { return false; }
 
-    StringReader& StringReader::operator=(const StringReader& r)
+    stringreader& stringreader::operator=(const stringreader& r)
     {
         m_str = r.m_str;
         return *this;
     }
 
-    namespace xparser
+    namespace parser
     {
-        Filters::Any          Filters::ANY;
-        Filters::Alphabet     Filters::ALPHABET;
-        Filters::AlphaNumeric Filters::ALPHANUMERIC;
-        Filters::Digit        Filters::DIGIT;
-        Filters::Decimal      Filters::DECIMAL;
-        Filters::EndOfLine    Filters::EOL;
-        Filters::EndOfText    Filters::EOT;
-        Filters::Hex          Filters::HEX;
-        Filters::WhiteSpace   Filters::WHITESPACE;
-        Filters::Word         Filters::WORD;
-        Utils::Email          Utils::EMAIL;
-        Utils::Host           Utils::HOST;
-        Utils::IPv4           Utils::IPV4;
-        Utils::Phone          Utils::PHONE;
-        Utils::ServerAddress  Utils::SERVERADDRESS;
-        Utils::Uri            Utils::URI;
+        filters::Any          filters::ANY;
+        filters::Alphabet     filters::ALPHABET;
+        filters::AlphaNumeric filters::ALPHANUMERIC;
+        filters::Digit        filters::DIGIT;
+        filters::Decimal      filters::DECIMAL;
+        filters::EndOfLine    filters::EOL;
+        filters::EndOfText    filters::EOT;
+        filters::Hex          filters::HEX;
+        filters::WhiteSpace   filters::WHITESPACE;
+        filters::Word         filters::WORD;
+        utils::Email          utils::EMAIL;
+        utils::Host           utils::HOST;
+        utils::IPv4           utils::IPV4;
+        utils::Phone          utils::PHONE;
+        utils::ServerAddress  utils::SERVERADDRESS;
+        utils::Uri            utils::URI;
 
-        namespace Manipulators
+        namespace manipulators
         {
-            bool Not::Check(StringReader& _Stream)
+            bool Not::Check(stringreader& _reader)
             {
-                StringReader _Start = _Stream;
-                if (!_Tokenizer.Check(_Start))
+                stringreader start = _reader;
+                if (!m_tokenizer_a.Check(start))
                 {
-                    _Stream.Skip();
+                    _reader.Skip();
                     return true;
                 }
                 return false;
             }
 
-            bool Or::Check(StringReader& _Stream)
+            bool Or::Check(stringreader& _reader)
             {
-                StringReader _Start = _Stream;
-                if (!_TokenizerA.Check(_Start))
+                stringreader start = _reader;
+                if (!m_tokenizer_a.Check(start))
                 {
-                    if (!_TokenizerB.Check(_Start))
+                    if (!m_tokenizer_b.Check(start))
                     {
                         return false;
                     }
                 }
-                _Stream = _Start;
+                _reader = start;
                 return true;
             }
 
-            bool And::Check(StringReader& _Stream)
+            bool And::Check(stringreader& _reader)
             {
-                StringReader _Start1, _Start2;
+                stringreader start1, start2;
 
-                _Start1 = _Stream;
-                if (!_TokenizerA.Check(_Start1))
+                start1 = _reader;
+                if (!m_tokenizer_a.Check(start1))
                     return false;
 
-                _Start2 = _Stream;
-                if (!_TokenizerB.Check(_Start2))
+                start2 = _reader;
+                if (!m_tokenizer_b.Check(start2))
                     return false;
 
-                _Start1 = ((_Start2 < _Start1) ? _Start2 : _Start1);
+                start1 = ((start2 < start1) ? start2 : start1);
 
-                _Stream = _Start1;
+                _reader = start1;
                 return true;
             }
 
-            bool Sequence::Check(StringReader& _Stream)
+            bool Sequence::Check(stringreader& _reader)
             {
-                StringReader _Start = _Stream;
+                stringreader start = _reader;
 
-                if (!_TokenizerA.Check(_Start))
+                if (!m_tokenizer_a.Check(start))
                     return false;
 
-                if (!_TokenizerB.Check(_Start))
+                if (!m_tokenizer_b.Check(start))
                     return false;
 
-                _Stream = _Start;
+                _reader = start;
                 return true;
             }
 
-            bool Within::Check(StringReader& _Stream)
+            bool Within::Check(stringreader& _reader)
             {
-                StringReader _Start = _Stream;
+                stringreader start = _reader;
 
                 u64 i = 0;
-                for (; i < _Max; i++)
+                for (; i < m_max; i++)
                 {
-                    if (!_TokenizerA.Check(_Start))
+                    if (!m_tokenizer_a.Check(start))
                         break;
                 }
 
-                if (i >= _Min && i <= _Max)
+                if (i >= m_min && i <= m_max)
                 {
-                    _Stream = _Start;
+                    _reader = start;
                     return true;
                 }
 
                 return false;
             }
 
-            bool Times::Check(StringReader& _Stream) { return Within(_Max, _Max, _TokenizerA).Check(_Stream); }
+            bool Times::Check(stringreader& _reader) { return Within(m_max, m_max, m_tokenizer_a).Check(_reader); }
+            bool OneOrMore::Check(stringreader& _reader) { return Within(1, -1, m_tokenizer_a).Check(_reader); }
+            bool ZeroOrOne::Check(stringreader& _reader) { return Within(0, 1, m_tokenizer_a).Check(_reader); }
+            bool While::Check(stringreader& _reader) { return Within(0, -1, m_tokenizer_a).Check(_reader); }
+            bool Until::Check(stringreader& _reader) { return (While(Not(m_tokenizer_a))).Check(_reader); }
 
-            bool OneOrMore::Check(StringReader& _Stream) { return Within(1, -1, _Tokenizer).Check(_Stream); }
-
-            bool ZeroOrOne::Check(StringReader& _Stream) { return Within(0, 1, _Tokenizer).Check(_Stream); }
-
-            bool While::Check(StringReader& _Stream) { return Within(0, -1, _Tokenizer).Check(_Stream); }
-
-            bool Until::Check(StringReader& _Stream) { return (While(Not(_Tokenizer))).Check(_Stream); }
-
-            bool Extract::Check(StringReader& _Stream)
+            bool Extract::Check(stringreader& _reader)
             {
-                StringReader _Start = _Stream;
+                stringreader start = _reader;
 
-                bool _Result = _TokenizerA.Check(_Start);
-                _Selection   = StringReader(_Start, _Stream);
+                bool result = m_tokenizer_a.Check(start);
+                m_selection = stringreader(start, _reader);
 
-                _Stream = _Start;
-                return _Result;
+                _reader = start;
+                return result;
             }
 
-            bool ReturnToCallback::Check(StringReader& _Stream)
+            bool ReturnToCallback::Check(stringreader& _reader)
             {
-                StringReader _Start  = _Stream;
-                bool         _Result = _TokenizerA.Check(_Start);
+                stringreader start  = _reader;
+                bool         result = m_tokenizer_a.Check(start);
 
-                StringReader output = StringReader(_Start, _Stream);
-                cb(output);
+                stringreader output = stringreader(start, _reader);
+                m_cb(output);
 
-                _Stream = _Start;
-                return _Result;
+                _reader = start;
+                return result;
             }
 
-            bool Enclosed::Check(StringReader& _Stream) { return (Filters::Exact(m_open) + _TokenizerA + Filters::Exact(m_close)).Check(_Stream); }
-        } // namespace Manipulators
+            bool Enclosed::Check(stringreader& _reader) { return (filters::Exact(m_open) + m_tokenizer_a + filters::Exact(m_close)).Check(_reader); }
+        } // namespace manipulators
 
-        namespace Filters
+        namespace filters
         {
-            bool Any::Check(StringReader& _Stream)
+            bool Any::Check(stringreader& _reader)
             {
-                if (!_Stream.Valid())
+                if (!_reader.Valid())
                     return false;
-                _Stream.Skip();
+                _reader.Skip();
                 return true;
             }
 
-            bool In::Check(StringReader& _Stream)
+            bool In::Check(stringreader& _reader)
             {
-                if (!_Stream.Valid())
+                if (!_reader.Valid())
                     return false;
 
-                uchar32 const s = _Stream.Peek();
-                _Input.Reset();
-                while (_Input.Valid())
+                uchar32 const s = _reader.Peek();
+                m_input.Reset();
+                while (m_input.Valid())
                 {
-                    uchar32 const c = _Input.Read();
+                    uchar32 const c = m_input.Read();
                     if (c == s)
                     {
-                        _Stream.Skip();
+                        _reader.Skip();
                         return true;
                     }
                 }
@@ -356,86 +334,81 @@ namespace xcore
                 return false;
             }
 
-            bool Between::Check(StringReader& _Stream)
+            bool Between::Check(stringreader& _reader)
             {
-                uchar32 c = _Stream.Peek();
-                if (c >= _Lower && c <= _Upper)
+                uchar32 c = _reader.Peek();
+                if (c >= m_lower && c <= m_upper)
                 {
-                    _Stream.Skip();
+                    _reader.Skip();
                     return true;
                 }
                 return false;
             }
 
-            bool Alphabet::Check(StringReader& _Stream) { return (Between(('a'), ('z')).Check(_Stream) | Between(('A'), ('Z')).Check(_Stream)); }
+            bool Alphabet::Check(stringreader& _reader) { return (Between(('a'), ('z')).Check(_reader) | Between(('A'), ('Z')).Check(_reader)); }
+            bool Digit::Check(stringreader& _reader) { return Between(('0'), ('9')).Check(_reader); }
+            bool Hex::Check(stringreader& _reader) { return (DIGIT | Between(('a'), ('f')) | Between(('A'), ('F'))).Check(_reader); }
+            bool AlphaNumeric::Check(stringreader& _reader) { return (ALPHABET | DIGIT).Check(_reader); }
 
-            bool Digit::Check(StringReader& _Stream) { return Between(('0'), ('9')).Check(_Stream); }
-
-            bool Hex::Check(StringReader& _Stream) { return (DIGIT | Between(('a'), ('f')) | Between(('A'), ('F'))).Check(_Stream); }
-
-            bool AlphaNumeric::Check(StringReader& _Stream) { return (ALPHABET | DIGIT).Check(_Stream); }
-
-            bool Exact::Check(StringReader& _Stream)
+            bool Exact::Check(stringreader& _reader)
             {
-                StringReader _StreamCursor = _Stream;
-                StringReader _InputCursor  = _Input;
-                while (_InputCursor.Valid())
+                stringreader streamcursor = _reader;
+                stringreader inputcursor  = m_input;
+                while (inputcursor.Valid())
                 {
-                    uchar32 a = _StreamCursor.Peek();
-                    uchar32 b = _InputCursor.Peek();
+                    uchar32 a = streamcursor.Peek();
+                    uchar32 b = inputcursor.Peek();
                     if (a != b)
-                        _StreamCursor.Skip();
-                    _InputCursor.Skip();
+                        streamcursor.Skip();
+                    inputcursor.Skip();
                 }
-                _Stream = _StreamCursor;
+                _reader = streamcursor;
                 return true;
             }
 
-            bool Like::Check(StringReader& _Stream)
+            bool Like::Check(stringreader& _reader)
             {
-                StringReader _StreamCursor = _Stream;
-                StringReader _InputCursor  = _Input;
-                while (_InputCursor.Valid())
+                stringreader streamcursor = _reader;
+                stringreader inputcursor  = m_input;
+                while (inputcursor.Valid())
                 {
-                    uchar32 a = _StreamCursor.Peek();
-                    uchar32 b = _InputCursor.Peek();
+                    uchar32 a = streamcursor.Peek();
+                    uchar32 b = inputcursor.Peek();
                     if (utf32::to_lower(a) != utf32::to_lower(b))
                         return false;
-                    _StreamCursor.Skip();
-                    _InputCursor.Skip();
+                    streamcursor.Skip();
+                    inputcursor.Skip();
                 }
-                _Stream = _StreamCursor;
+                _reader = streamcursor;
                 return true;
             }
 
-            bool WhiteSpace::Check(StringReader& _Stream) { return In((" \t\n\r")).Check(_Stream); }
+            bool WhiteSpace::Check(stringreader& _reader) { return In((" \t\n\r")).Check(_reader); }
 
-            bool Is::Check(StringReader& _Stream)
+            bool Is::Check(stringreader& _reader)
             {
-                if (_Stream.Peek() == _Letter)
+                if (_reader.Peek() == _Letter)
                 {
-                    _Stream.Skip();
+                    _reader.Skip();
                     return true;
                 }
                 return false;
             }
 
-            bool Decimal::Check(StringReader& _Stream) { return Manipulators::OneOrMore(DIGIT).Check(_Stream); }
-
-            bool Word::Check(StringReader& _Stream) { return Manipulators::OneOrMore(ALPHABET).Check(_Stream); }
-
-            bool EndOfText::Check(StringReader& _Stream) { return (_Stream.Peek() == ('\0')); }
+            bool Decimal::Check(stringreader& _reader) { return manipulators::OneOrMore(DIGIT).Check(_reader); }
+            bool Word::Check(stringreader& _reader) { return manipulators::OneOrMore(ALPHABET).Check(_reader); }
+            bool EndOfText::Check(stringreader& _reader) { return (_reader.Peek() == ('\0')); }
 
 #if defined(PLATFORM_PC)
-            bool EndOfLine::Check(StringReader& _Stream) { return Exact("\r\n").Check(_Stream); }
+            bool EndOfLine::Check(stringreader& _reader) { return Exact("\r\n").Check(_reader); }
 #else
-            bool EndOfLine::Check(StringReader& _Stream) { return Exact("\n").Check(_Stream); }
+            bool EndOfLine::Check(stringreader& _reader) { return Exact("\n").Check(_reader); }
 #endif
 
-            bool Integer::Check(StringReader& _Stream)
+            bool Integer::Check(stringreader& _reader)
             {
                 s32          value       = 0;
-                StringReader input       = _Stream;
+                stringreader input       = _reader;
                 uchar32      c           = input.Peek();
                 bool         is_negative = c == '-';
                 if (is_negative)
@@ -447,22 +420,22 @@ namespace xcore
                         break;
                     value = (value * 10) + utf32::to_digit(c);
                 }
-                if (input == _Stream)
+                if (input == _reader)
                     return false;
                 if (is_negative)
                     value = -value;
-                if (value >= _Min && value <= _Max)
+                if (value >= m_min && value <= m_max)
                 {
-                    _Stream = input;
+                    _reader = input;
                     return true;
                 }
                 return false;
             }
 
-            bool Float::Check(StringReader& _Stream)
+            bool Float::Check(stringreader& _reader)
             {
                 f32          value       = 0.0f;
-                StringReader input       = _Stream;
+                stringreader input       = _reader;
                 uchar32      c           = input.Peek();
                 bool         is_negative = c == '-';
                 if (is_negative)
@@ -487,96 +460,95 @@ namespace xcore
                         mantissa *= 10.0f;
                     }
                 }
-                if (input == _Stream)
+                if (input == _reader)
                     return false;
                 if (is_negative)
                     value = -value;
-                if (value >= _Min && value <= _Max)
+                if (value >= m_min && value <= m_max)
                 {
-                    _Stream = input;
+                    _reader = input;
                     return true;
                 }
                 return false;
             }
-        } // namespace Filters
+        } // namespace filters
 
-        namespace Utils
+        namespace utils
         {
-			using namespace Manipulators;
-			using namespace Filters;
+            using namespace manipulators;
+            using namespace filters;
 
-            bool IPv4::Check(StringReader& _Stream) { return (3 * ((Within(1, 3, DIGIT) & Integer(255)) + Is(('.'))) + (Within(1, 3, DIGIT) & Filters::Integer(255))).Check(_Stream); }
+            bool IPv4::Check(stringreader& _reader) { return (3 * ((Within(1, 3, DIGIT) & Integer(255)) + Is(('.'))) + (Within(1, 3, DIGIT) & filters::Integer(255))).Check(_reader); }
 
-            bool Host::Check(StringReader& _Stream)
+            bool Host::Check(stringreader& _reader)
             {
                 return (IPV4 |
                         (OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)) + ZeroOrMore(Is(('.')) + OneOrMore(ALPHANUMERIC) + ZeroOrMore(Is(('-')) + OneOrMore(ALPHANUMERIC)))))
-                    .Check(_Stream);
+                    .Check(_reader);
             }
 
-            bool Email::Check(StringReader& _Stream)
+            bool Email::Check(stringreader& _reader)
             {
-                return (OneOrMore(ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))) + ZeroOrMore(Is('.') + (ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-")))) + Is('@') + HOST).Check(_Stream);
+                return (OneOrMore(ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))) + ZeroOrMore(Is('.') + (ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-")))) + Is('@') + HOST).Check(_reader);
             }
 
-            bool Phone::Check(StringReader& _Stream)
+            bool Phone::Check(stringreader& _reader)
             {
                 return (ZeroOrMore(Is(('+'))) + (ZeroOrMore(Is(('(')) + OneOrMore(DIGIT) + Is((')'))) + ZeroOrMore(WHITESPACE)) + OneOrMore(DIGIT) + ZeroOrMore(In((" -")) + OneOrMore(DIGIT)))
-                    .Check(_Stream);
+                    .Check(_reader);
             }
 
-            bool ServerAddress::Check(StringReader& _Stream) { return (HOST + ZeroOrOne(Is((':')) + Integer(1, 65535))).Check(_Stream); }
+            bool ServerAddress::Check(stringreader& _reader) { return (HOST + ZeroOrOne(Is((':')) + Integer(1, 65535))).Check(_reader); }
 
-            bool Uri::Check(StringReader& _Stream)
+            bool Uri::Check(stringreader& _reader)
             {
                 return (OneOrMore(ALPHANUMERIC) + Is((':')) + (OneOrMore(ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))) + ZeroOrMore(Is('.') + (ALPHANUMERIC | In(("!#$%&'*+/=?^_`{|}~-"))))) + Is(('@')) +
                         SERVERADDRESS)
-                    .Check(_Stream);
+                    .Check(_reader);
             }
-        } // namespace Utils
-    }     // namespace xparser
+        } // namespace utils
+    }     // namespace parser
 
-    using namespace xcore::xparser;
+    using namespace xcore::parser;
 
     /*********************************************************************************/
-    StringProcessor::StringProcessor() {}
-
-    StringProcessor::StringProcessor(StringReader const& str)
+    stringprocessor::stringprocessor() {}
+    stringprocessor::stringprocessor(stringreader const& str)
     {
-        _String = str;
-        _Cursor = str;
+        m_string = str;
+        m_cursor = str;
     }
 
-    bool StringProcessor::Parse(TokenizerInterface& tok)
+    bool stringprocessor::Parse(tokenizer& tok)
     {
-        StringReader _Start  = _Cursor;
-        bool         _Result = tok.Check(_Cursor);
-        if (_Result)
-            _LastTokenized = StringReader(_Start, _Cursor);
-        return _Result;
+        stringreader start  = m_cursor;
+        bool         result = tok.Check(m_cursor);
+        if (result)
+            m_lastTokenized = stringreader(start, m_cursor);
+        return result;
     }
 
-    bool StringProcessor::Validate(TokenizerInterface& tok) { return (tok + Filters::EndOfText()).Check(_Cursor); }
+    bool stringprocessor::Validate(tokenizer& tok) { return (tok + filters::EndOfText()).Check(m_cursor); }
 
-    StringReader StringProcessor::Search(TokenizerInterface& tok)
+    stringreader stringprocessor::Search(tokenizer& tok)
     {
-        bool _Result = (Manipulators::Until(Filters::EOT | tok)).Check(_Cursor);
-        if (_Result && _Cursor.Valid())
+        bool result = (manipulators::Until(filters::EOT | tok)).Check(m_cursor);
+        if (result && m_cursor.Valid())
         {
-            StringReader _Start = _Cursor;
-            if ((tok).Check(_Cursor))
+            stringreader start = m_cursor;
+            if ((tok).Check(m_cursor))
             {
-                return StringReader(_Start, _Cursor);
+                return stringreader(start, m_cursor);
             }
         }
-        return StringReader();
+        return stringreader();
     }
 
-    bool StringProcessor::IsEOT() { return (_Cursor.Peek() == ('\0')); }
+    bool stringprocessor::IsEOT() { return (m_cursor.Peek() == ('\0')); }
 
-    void StringProcessor::Reset()
+    void stringprocessor::Reset()
     {
-        _LastTokenized = StringReader();
-        _Cursor        = _String;
+        m_lastTokenized = stringreader();
+        m_cursor        = m_string;
     }
 } // namespace xcore
