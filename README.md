@@ -23,36 +23,57 @@ struct state
 {
     u32         line;
     u32         row;
+    u32         reg;
     u32         chr;
     u32         lor;
 };
 
+class parser
+{
+public:
+    enum { IGNORE_CASE = 1 };
+    
+};
+
 struct item
 {
+    static const u32 SILENT = 0;
+    static inline u32 EVENT(u32 i) { return 0x80000000 | i; }
+
     u64     m_left;
     u64     m_right;
 
     void    parse_setup(parser& p, state& s)
     {
         // Character conversion
-        p.convert('.', '0');
-        p.convert('#', '1');
+        p.convert('.', '0', SILENT);
+        p.convert('#', '1', SILENT);
+
+        // Shifts
+        p.shift("1", 1, &s.reg, SILENT);
+        p.shift("0", 0, &s.reg, SILENT);
+
+        // Events
+        p.when(" ", EVENT(4));
+        p.range('a', 'z', parser::IGNORE_CASE, EVENT(4));
+        p.range('0', '9', parser::IGNORE_CASE, EVENT(5));
 
         // Counters
-        p.counter("0", &s.chr);
-        p.counter("1", &s.chr);
-        p.counter("/", &s.row);
-        p.counter("=>", &s.lor);
-        p.counter("\n", &s.line);
+        p.count("0", &s.chr, SILENT);
+        p.count("1", &s.chr, SILENT);
+        p.count("/", &s.row, EVENT(1));
+        p.count("=>", &s.lor, EVENT(2));
+        p.count("\n", &s.line, EVENT(3));
 
-        // Resets
-        p.reset("/", &s.chr);
-        p.reset("=>", &s.row);
-        p.reset("\n", &s.row);
-        p.reset("\n", &s.lor);
+        // Sets
+        p.set("/", &s.chr, 0);
+        p.set("/", &s.reg, 0);
+        p.set("=>", &s.row, 0);
+        p.set("\n", &s.row, 0);
+        p.set("\n", &s.lor, 0);
     }
 
-    void    parse_event(parser& p, state& s)
+    void    parse_event(parser& p, state& s, u32 e)
     {
         // This function is called whenever one of the above 'events' happen.
         // So lets say the input text is 5 lines like this:
