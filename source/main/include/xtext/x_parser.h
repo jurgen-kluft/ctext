@@ -11,123 +11,128 @@ namespace xcore
 {
     // Move to xbase
     // Actually this can totally replace the runes/crunes everywhere.
-    // Even for console, we can pass this charreader and literally use
+    // Even for console, we can pass this charreader_t and literally use
     // any string format, from ascii, utf16 ....
     //
-    class charreader;
 
-    class charwriter
+    namespace xtext
     {
-    public:
-        charwriter();
-        charwriter(char* str, char* end);
-        charwriter(utf32::prune str, utf32::prune end);
-        charwriter(ascii::runes const& str);
-        charwriter(utf8::runes const& str);
-        charwriter(utf16::runes const& str);
-        charwriter(utf32::runes const& str);
-        charwriter(const charwriter&);
+        class reader_t;
+        class reader_t::cursor_t;
 
-        void reset();
-        bool valid() const;
-        void write(uchar32 c);
-        void write(charreader const& c);
-
-        bool operator<(const charwriter&) const;
-        bool operator>(const charwriter&) const;
-        bool operator<=(const charwriter&) const;
-        bool operator>=(const charwriter&) const;
-        bool operator==(const charwriter& t) const;
-        bool operator!=(const charwriter& t) const;
-
-        union runes
+        class writer_t
         {
-            inline runes() : _ascii() {}
-            ascii::runes _ascii;
-            utf8::runes  _utf8;
-            utf16::runes _utf16;
-            utf32::runes _utf32;
+        public:
+            struct cursor_t
+            {
+                union runeptr
+                {
+                    inline runeptr() : _ascii(nullptr) {}
+                    ascii::prune m_ascii;
+                    utf8::prune  m_utf8;
+                    utf16::prune m_utf16;
+                    utf32::prune m_utf32;
+                };
+
+                cursor_t& operator=(const cursor_t&);
+                bool operator<(const cursor_t&) const;
+                bool operator>(const cursor_t&) const;
+                bool operator<=(const cursor_t&) const;
+                bool operator>=(const cursor_t&) const;
+                bool operator==(const cursor_t&) const;
+                bool operator!=(const cursor_t&) const;
+
+                runeptr m_cursor;
+            };
+
+            writer_t();
+            writer_t(char* str, char* end);
+            writer_t(utf32::prune str, utf32::prune end);
+            writer_t(ascii::runes const& str);
+            writer_t(utf8::runes const& str);
+            writer_t(utf16::runes const& str);
+            writer_t(utf32::runes const& str);
+            writer_t(const writer_t&);
+
+            cursor_t get_cursor() const;
+
+            void reset(cursor_t&) const;
+            bool valid(cursor_t&) const;
+            void write(cursor_t&, uchar32 c);
+            void write(reader_t const& c, reader_t::cursor_t&);
+
+        private:
+            union runes
+            {
+                inline runes() : _ascii() {}
+                ascii::runes _ascii;
+                utf8::runes  _utf8;
+                utf16::runes _utf16;
+                utf32::runes _utf32;
+            };
+            runes m_runes;
+            s32   m_type;
         };
-        runes m_runes;
-        s32   m_type;
-    };
 
-    class charreader
-    {
-    public:
-        charreader();
-        charreader(const char* str);
-        charreader(utf32::pcrune str);
-        charreader(ascii::crunes const& str);
-        charreader(utf8::crunes const& str);
-        charreader(utf16::crunes const& str);
-        charreader(utf32::crunes const& str);
-        charreader(const charwriter&);
-        charreader(const charreader&);
-
-        s64     size() const;
-        void    reset();
-        bool    valid() const;
-        uchar32 peek() const;
-        uchar32 read();
-        void    skip();
-        void    select(charreader const& from, charreader const& until);
-
-        charreader& operator=(const charreader&);
-        bool        operator<(const charreader&) const;
-        bool        operator>(const charreader&) const;
-        bool        operator<=(const charreader&) const;
-        bool        operator>=(const charreader&) const;
-        bool        operator==(const charreader& t) const;
-        bool        operator!=(const charreader& t) const;
-
-        union crunes
+        class reader_t
         {
-            inline crunes() : _ascii() {}
-            ascii::crunes _ascii;
-            utf8::crunes  _utf8;
-            utf16::crunes _utf16;
-            utf32::crunes _utf32;
+        public:
+            struct cursor_t
+            {
+                union runeptr
+                {
+                    inline runeptr() : _ascii(nullptr) {}
+                    ascii::pcrune m_ascii;
+                    utf8::pcrune  m_utf8;
+                    utf16::pcrune m_utf16;
+                    utf32::pcrune m_utf32;
+                };
+
+                cursor_t& operator=(const cursor_t&);
+                bool    operator<(const cursor_t&) const;
+                bool    operator>(const cursor_t&) const;
+                bool    operator<=(const cursor_t&) const;
+                bool    operator>=(const cursor_t&) const;
+                bool    operator==(const cursor_t&) const;
+                bool    operator!=(const cursor_t&) const;
+
+                runeptr m_cursor;
+            };
+
+            reader_t();
+            reader_t(const char* str);
+            reader_t(utf32::pcrune str);
+            reader_t(ascii::crunes const& str);
+            reader_t(utf8::crunes const& str);
+            reader_t(utf16::crunes const& str);
+            reader_t(utf32::crunes const& str);
+            reader_t(const writer_t&);
+            reader_t(const reader_t&);
+
+            cursor_t get_cursor() const;
+
+            s64     size() const;
+            s64     size(cursor_t const&) const;
+            void    reset(cursor_t const&);
+            bool    valid(cursor_t const&) const;
+            uchar32 peek(cursor_t const&) const;
+            uchar32 read(cursor_t const&);
+            void    skip(cursor_t const&);
+            void    select(cursor_t const& from, cursor_t const& until);
+
+        private:
+            union crunes
+            {
+                inline crunes() : _ascii() {}
+                ascii::crunes _ascii;
+                utf8::crunes  _utf8;
+                utf16::crunes _utf16;
+                utf32::crunes _utf32;
+            };
+            crunes m_runes;
+            s32    m_type;
         };
-        crunes m_runes;
-        s32    m_type;
-    };
-
-    class stringwriter
-    {
-    };
-
-    class stringreader
-    {
-        charreader m_str;
-
-    public:
-        stringreader();
-        stringreader(const char* str);
-        stringreader(const stringreader& chars);
-        stringreader(const stringreader& begin, const stringreader& until);
-
-        s64  Size() const;
-        void Reset();
-
-        uchar32 Read();
-        uchar32 Peek() const;
-
-        void Select(const stringreader& begin, const stringreader& cursor);
-        bool Valid() const;
-        void Skip();
-
-        void Write(stringwriter& writer);
-
-        bool operator<(const stringreader&) const;
-        bool operator>(const stringreader&) const;
-        bool operator<=(const stringreader&) const;
-        bool operator>=(const stringreader&) const;
-        bool operator==(const stringreader&) const;
-        bool operator!=(const stringreader&) const;
-
-        stringreader& operator=(const stringreader&);
-    };
+    }
 
     namespace parser
     {
@@ -135,7 +140,7 @@ namespace xcore
         {
         public:
             /*!
-             * @fn 	bool Check(stringreader&)
+             * @fn 	bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&)
              * Check if the string pointed by cursor is complying to this parsing rule
              * @param[in/out] cursor  A cursor to the parsing string, after successful
              * parsing, the cursor value should move to the last character as far as the
@@ -143,7 +148,7 @@ namespace xcore
              * @return  Return @a true if the parsing succeeds. Otherwise it returns false
              *
              */
-            virtual bool Check(stringreader&) = 0;
+            virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&) = 0;
         };
 
         class tokenizer_1 : public tokenizer
@@ -197,7 +202,7 @@ namespace xcore
             {
             public:
                 inline Not(tokenizer& toka) : tokenizer_1(toka) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -229,7 +234,7 @@ namespace xcore
             {
             public:
                 inline Or(tokenizer& toka, tokenizer& tokb) : tokenizer_2(toka, tokb) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -261,7 +266,7 @@ namespace xcore
             {
             public:
                 inline And(tokenizer& toka, tokenizer& tokb) : tokenizer_2(toka, tokb) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -284,7 +289,7 @@ namespace xcore
             {
             public:
                 inline Sequence(tokenizer& toka, tokenizer& tokb) : tokenizer_2(toka, tokb) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -313,7 +318,7 @@ namespace xcore
                 inline Within(u64 min, u64 max, tokenizer& toka) : tokenizer_1(toka), m_min(min), m_max(max) {}
                 inline Within(u64 max, tokenizer& toka) : tokenizer_1(toka), m_min(0), m_max(max) {}
                 inline Within(tokenizer& toka) : tokenizer_1(toka), m_min(0), m_max(0xffffffffffffffffUL) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -340,7 +345,7 @@ namespace xcore
 
             public:
                 inline Times(s32 max, tokenizer& toka) : tokenizer_1(toka), m_max(max) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -362,7 +367,7 @@ namespace xcore
             {
             public:
                 inline OneOrMore(tokenizer& toka) : tokenizer_1(toka) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -384,7 +389,7 @@ namespace xcore
             {
             public:
                 inline ZeroOrOne(tokenizer& toka) : tokenizer_1(toka) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             typedef ZeroOrOne Optional;
             typedef ZeroOrOne _0Or1;
@@ -409,7 +414,7 @@ namespace xcore
             {
             public:
                 inline While(tokenizer& toka) : tokenizer_1(toka) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             typedef While ZeroOrMore;
 
@@ -431,7 +436,7 @@ namespace xcore
             {
             public:
                 inline Until(tokenizer& toka) : tokenizer_1(toka) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -447,11 +452,11 @@ namespace xcore
              */
             class Extract : public tokenizer_1
             {
-                stringreader& _Selection;
+                stringreader_t& _Selection;
 
             public:
-                inline Extract(stringreader& m1, tokenizer& toka) : tokenizer_1(toka), _Selection(m1) {}
-                virtual bool Check(StringReader&);
+                inline Extract(stringreader_t& m1, tokenizer& toka) : tokenizer_1(toka), _Selection(m1) {}
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -463,21 +468,21 @@ namespace xcore
              *
              * @b Example:
              * @code{.cpp}
-             * 		void callback(stringreader& _token)
+             * 		void callback(stringreader_t& _token)
              * 		{
              * 			// Process the token
              * 		}
              * 		ReturnToCallback(callback,Is('C')) ; //
              * @endcode
              */
-            typedef void (*CallBack)(stringreader&);
+            typedef void (*CallBack)(stringreader_t&);
             class ReturnToCallback : public tokenizer_1
             {
                 CallBack m_cb;
 
             public:
                 inline ReturnToCallback(Callback cb, tokenizer& toka) : tokenizer_1(toka), m_cb(cb) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -492,12 +497,12 @@ namespace xcore
              */
             class Enclosed : public tokenizer_1
             {
-                stringreader m_open;
-                stringreader m_close;
+                stringreader_t m_open;
+                stringreader_t m_close;
 
             public:
                 inline Enclosed(tokenizer& toka) : tokenizer_1(toka), m_cb(cb) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
         } // namespace manipulators
@@ -519,7 +524,7 @@ namespace xcore
             {
             public:
                 Any() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Any ANY;
 
@@ -536,12 +541,12 @@ namespace xcore
              */
             class In : public interface
             {
-                stringreader m_input;
+                stringreader_t m_input;
 
             public:
                 In() {}
-                In(stringreader input) : m_input(input) {}
-                virtual bool Check(StringReader&);
+                In(stringreader_t input) : m_input(input) {}
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -565,7 +570,7 @@ namespace xcore
             public:
                 Between() : m_lower('a'), m_upper('z') {}
                 Between(uchar32 lower, uchar32 upper) : m_lower(lower), m_upper(upper) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             // TODO:class SmallLetter;
@@ -588,7 +593,7 @@ namespace xcore
             {
             public:
                 Alphabet() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Alphabet ALPHABET;
 
@@ -607,7 +612,7 @@ namespace xcore
             {
             public:
                 Digit() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Digit DIGIT;
 
@@ -626,7 +631,7 @@ namespace xcore
             {
             public:
                 Hex() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Hex HEX;
 
@@ -645,7 +650,7 @@ namespace xcore
             {
             public:
                 Hex() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern AlphaNumeric ALPHANUMERIC;
 
@@ -664,12 +669,12 @@ namespace xcore
              */
             class Exact : public interface
             {
-                stringreader m_input;
+                stringreader_t m_input;
 
             public:
                 Exact() {}
-                Exact(stringreader input) : m_input(input) {}
-                virtual bool Check(StringReader&);
+                Exact(stringreader_t input) : m_input(input) {}
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -686,12 +691,12 @@ namespace xcore
              */
             class Like : public interface
             {
-                stringreader m_input;
+                stringreader_t m_input;
 
             public:
                 Like() {}
-                Like(stringreader input) : m_input(input) {}
-                virtual bool Check(StringReader&);
+                Like(stringreader_t input) : m_input(input) {}
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -710,7 +715,7 @@ namespace xcore
             {
             public:
                 WhiteSpace() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern WhiteSpace WHITESPACE;
 
@@ -731,7 +736,7 @@ namespace xcore
             public:
                 Is() : m_letter(' ') {}
                 Is(uchar letter) : m_letter(letter) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -750,7 +755,7 @@ namespace xcore
             {
             public:
                 Decimal() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Decimal DECIMAL;
 
@@ -770,7 +775,7 @@ namespace xcore
             {
             public:
                 Word() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Word WORD;
 
@@ -791,7 +796,7 @@ namespace xcore
             {
             public:
                 EndOfText() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern EndOfText EOT;
 
@@ -806,7 +811,7 @@ namespace xcore
             {
             public:
                 EndOfLine() {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern EndOfLine EOL;
 
@@ -831,7 +836,7 @@ namespace xcore
                 Integer() : m_min(0), max(0x7fffffff) {}
                 Integer(s32 max) : m_min(0), max(max) {}
                 Integer(s32 min, s32 max) : m_min(min), max(max) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
@@ -856,7 +861,7 @@ namespace xcore
                 Float() : m_min(0.0f), max(3.402823e+38f) {}
                 Float(f32 max) : m_min(0.0f), max(max) {}
                 Float(f32 min, f32 max) : m_min(min), max(max) {}
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             // namespace Date
@@ -890,7 +895,7 @@ namespace xcore
             class IPv4 : public interface
             {
             public:
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern IPv4 IPV4;
 
@@ -903,7 +908,7 @@ namespace xcore
             class Host : public interface
             {
             public:
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Host HOST;
 
@@ -916,7 +921,7 @@ namespace xcore
             class Email : public interface
             {
             public:
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Email EMAIL;
 
@@ -929,7 +934,7 @@ namespace xcore
             class Phone : public interface
             {
             public:
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Phone PHONE;
 
@@ -942,7 +947,7 @@ namespace xcore
             class ServerAddress : public interface
             {
             public:
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern ServerAddress SERVERADDRESS;
 
@@ -955,7 +960,7 @@ namespace xcore
             class Uri : public interface
             {
             public:
-                virtual bool Check(StringReader&);
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             extern Uri URI;
 
@@ -966,17 +971,17 @@ namespace xcore
     class stringprocessor
     {
     private:
-        stringreader m_string;
-        stringreader m_cursor;
-        stringreader m_lastTokenized;
+        stringreader_t m_string;
+        stringreader_t m_cursor;
+        stringreader_t m_lastTokenized;
 
     public:
         stringprocessor();
-        stringprocessor(stringreader const& str);
+        stringprocessor(stringreader_t const& str);
 
         bool         Parse(tokenizer::tokenizer&);
         bool         Validate(tokenizer::tokenizer&);
-        stringreader Search(tokenizer::tokenizer&);
+        stringreader_t Search(tokenizer::tokenizer&);
         bool         IsEOT();
         void         Reset();
     };
