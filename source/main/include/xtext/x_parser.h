@@ -17,9 +17,6 @@ namespace xcore
 
     namespace xtext
     {
-        class reader_t;
-        class reader_t::cursor_t;
-
         class writer_t
         {
         public:
@@ -27,7 +24,7 @@ namespace xcore
             {
                 union runeptr
                 {
-                    inline runeptr() : _ascii(nullptr) {}
+                    inline runeptr() : m_ascii(nullptr) {}
                     ascii::prune m_ascii;
                     utf8::prune  m_utf8;
                     utf16::prune m_utf16;
@@ -35,12 +32,12 @@ namespace xcore
                 };
 
                 cursor_t& operator=(const cursor_t&);
-                bool operator<(const cursor_t&) const;
-                bool operator>(const cursor_t&) const;
-                bool operator<=(const cursor_t&) const;
-                bool operator>=(const cursor_t&) const;
-                bool operator==(const cursor_t&) const;
-                bool operator!=(const cursor_t&) const;
+                bool      operator<(const cursor_t&) const;
+                bool      operator>(const cursor_t&) const;
+                bool      operator<=(const cursor_t&) const;
+                bool      operator>=(const cursor_t&) const;
+                bool      operator==(const cursor_t&) const;
+                bool      operator!=(const cursor_t&) const;
 
                 runeptr m_cursor;
             };
@@ -59,16 +56,15 @@ namespace xcore
             void reset(cursor_t&) const;
             bool valid(cursor_t&) const;
             void write(cursor_t&, uchar32 c);
-            void write(reader_t const& c, reader_t::cursor_t&);
 
         private:
             union runes
             {
-                inline runes() : _ascii() {}
-                ascii::runes _ascii;
-                utf8::runes  _utf8;
-                utf16::runes _utf16;
-                utf32::runes _utf32;
+                inline runes() : m_ascii() {}
+                ascii::runes m_ascii;
+                utf8::runes  m_utf8;
+                utf16::runes m_utf16;
+                utf32::runes m_utf32;
             };
             runes m_runes;
             s32   m_type;
@@ -79,9 +75,11 @@ namespace xcore
         public:
             struct cursor_t
             {
+                inline cursor_t() : m_cursor() {}
+
                 union runeptr
                 {
-                    inline runeptr() : _ascii(nullptr) {}
+                    inline runeptr() : m_ascii(nullptr) {}
                     ascii::pcrune m_ascii;
                     utf8::pcrune  m_utf8;
                     utf16::pcrune m_utf16;
@@ -89,12 +87,12 @@ namespace xcore
                 };
 
                 cursor_t& operator=(const cursor_t&);
-                bool    operator<(const cursor_t&) const;
-                bool    operator>(const cursor_t&) const;
-                bool    operator<=(const cursor_t&) const;
-                bool    operator>=(const cursor_t&) const;
-                bool    operator==(const cursor_t&) const;
-                bool    operator!=(const cursor_t&) const;
+                bool      operator<(const cursor_t&) const;
+                bool      operator>(const cursor_t&) const;
+                bool      operator<=(const cursor_t&) const;
+                bool      operator>=(const cursor_t&) const;
+                bool      operator==(const cursor_t&) const;
+                bool      operator!=(const cursor_t&) const;
 
                 runeptr m_cursor;
             };
@@ -108,35 +106,44 @@ namespace xcore
             reader_t(utf32::crunes const& str);
             reader_t(const writer_t&);
             reader_t(const reader_t&);
+            reader_t(const reader_t&, const cursor_t& begin, const cursor_t& end);
 
             cursor_t get_cursor() const;
 
             s64     size() const;
             s64     size(cursor_t const&) const;
-            void    reset(cursor_t const&);
+            void    reset(cursor_t&) const;
             bool    valid(cursor_t const&) const;
             uchar32 peek(cursor_t const&) const;
-            uchar32 read(cursor_t const&);
-            void    skip(cursor_t const&);
-            void    select(cursor_t const& from, cursor_t const& until);
+            uchar32 read(cursor_t&) const;
+            void    skip(cursor_t&) const;
+
+            reader_t select(cursor_t const& from, cursor_t const& to) const;
+
+            reader_t& operator=(const reader_t& other);
+
+            bool operator==(const reader_t& other) const;
+            bool operator!=(const reader_t& other) const;
 
         private:
             union crunes
             {
-                inline crunes() : _ascii() {}
-                ascii::crunes _ascii;
-                utf8::crunes  _utf8;
-                utf16::crunes _utf16;
-                utf32::crunes _utf32;
+                inline crunes() : m_ascii(nullptr) {}
+                ascii::crunes m_ascii;
+                utf8::crunes  m_utf8;
+                utf16::crunes m_utf16;
+                utf32::crunes m_utf32;
             };
-            crunes m_runes;
-            s32    m_type;
+            crunes   m_runes;
+            s32      m_type;
+            cursor_t m_begin;
+            cursor_t m_end;
         };
-    }
+    } // namespace xtext
 
-    namespace parser
+    namespace xparser
     {
-        class tokenizer
+        class tokenizer_t
         {
         public:
             /*!
@@ -151,19 +158,22 @@ namespace xcore
             virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&) = 0;
         };
 
-        class tokenizer_1 : public tokenizer
+        class tokenizer_1_t : public tokenizer_t
         {
-            tokenizer& m_tokenizer_a;
-
         public:
-            tokenizer_1(tokenizer& toka) : m_tokenizer_a(toka) {}
+            tokenizer_1_t(tokenizer_t& toka) : m_tokenizer_a(toka) {}
+
+        protected:
+            tokenizer_t& m_tokenizer_a;
         };
-        class tokenizer_2 : public tokenizer_1
+        class tokenizer_2_t : public tokenizer_t
         {
-            tokenizer& m_tokenizer_b;
-
         public:
-            tokenizer_1(tokenizer& toka, tokenizer& tokb) : tokenizer_1(toka), m_tokenizer_b(tokb) {}
+            tokenizer_2_t(tokenizer_t& toka, tokenizer_t& tokb) : m_tokenizer_a(toka), m_tokenizer_b(tokb) {}
+
+        protected:
+            tokenizer_t& m_tokenizer_a;
+            tokenizer_t& m_tokenizer_b;
         };
 
         /*!
@@ -177,12 +187,12 @@ namespace xcore
          */
 
         /*!
-         * @namespace 	manipulators
+         * @namespace 	xmanipulators
          * @brief 		the namespace that contains controlling lexical and
          * relational patterns parsing/recognition elements
-         * @see 		filters, filters::utils
+         * @see 		xfilters, xfilters::xutils
          */
-        namespace manipulators
+        namespace xmanipulators
         {
             /*!
              * @class Not
@@ -198,10 +208,10 @@ namespace xcore
              * @endcode
              * @see And, Or, Not
              */
-            class Not : public tokenizer_1
+            class Not : public tokenizer_1_t
             {
             public:
-                inline Not(tokenizer& toka) : tokenizer_1(toka) {}
+                inline Not(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -230,10 +240,10 @@ namespace xcore
              * @endcode
              * @see And, Or, Not
              */
-            class Or : public tokenizer_2
+            class Or : public tokenizer_2_t
             {
             public:
-                inline Or(tokenizer& toka, tokenizer& tokb) : tokenizer_2(toka, tokb) {}
+                inline Or(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -262,10 +272,10 @@ namespace xcore
              * @endcode
              * @see And, Or, Not
              */
-            class And : public tokenizer_2
+            class And : public tokenizer_2_t
             {
             public:
-                inline And(tokenizer& toka, tokenizer& tokb) : tokenizer_2(toka, tokb) {}
+                And(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -285,10 +295,17 @@ namespace xcore
              * @endcode
              * @see Exact, Within
              */
-            class Sequence : public tokenizer_2
+            class Sequence : public tokenizer_2_t
             {
             public:
-                inline Sequence(tokenizer& toka, tokenizer& tokb) : tokenizer_2(toka, tokb) {}
+                inline Sequence(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
+                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+            };
+            class Sequence3 : public tokenizer_2_t
+            {
+                tokenizer& m_tokenizer_c;
+            public:
+                inline Sequence3(tokenizer_t& toka, tokenizer_t& tokb, tokenizer_t& tokc) : tokenizer_2_t(toka, tokb), m_tokenizer_c(tokc) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -307,17 +324,17 @@ namespace xcore
              * 		Within(2,4,Is('A')); // "AA","AAA","AAAA" are OK , "","A" or
              * "AAAAA" fail
              * @endcode
-             * @see 	Times, While, Until, OneOrMore, ZeroOrOne, filters::Exact
+             * @see 	Times, While, Until, OneOrMore, ZeroOrOne, xfilters::Exact
              * 		, Sequence
              */
-            class Within : public tokenizer_1
+            class Within : public tokenizer_1_t
             {
                 u64 m_min, m_max;
 
             public:
-                inline Within(u64 min, u64 max, tokenizer& toka) : tokenizer_1(toka), m_min(min), m_max(max) {}
-                inline Within(u64 max, tokenizer& toka) : tokenizer_1(toka), m_min(0), m_max(max) {}
-                inline Within(tokenizer& toka) : tokenizer_1(toka), m_min(0), m_max(0xffffffffffffffffUL) {}
+                Within(u64 min, u64 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_min(min), m_max(max) {}
+                Within(u64 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_min(0), m_max(max) {}
+                Within(tokenizer_t& toka) : tokenizer_1_t(toka), m_min(0), m_max(0xffffffffffffffffUL) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -337,14 +354,14 @@ namespace xcore
              * 		Within(2,4,Is('A')); // "AA","AAA","AAAA" are OK , "","A" or
              * "AAAAA" fail
              * @endcode
-             * @see 	 While, Until, OneOrMore, ZeroOrOne, filters::Exact, Sequence
+             * @see 	 While, Until, OneOrMore, ZeroOrOne, xfilters::Exact, Sequence
              */
-            class Times : public tokenizer_1
+            class Times : public tokenizer_1_t
             {
                 s32 m_max;
 
             public:
-                inline Times(s32 max, tokenizer& toka) : tokenizer_1(toka), m_max(max) {}
+                inline Times(s32 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_max(max) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -361,12 +378,12 @@ namespace xcore
              * @code{.cpp}
              * 		OneOrMore(Is('A')); // "A","AA","AAA"  are OK , "" or "B" fail
              * @endcode
-             * @see 	Times, While, Until, ZeroOrOne, filters::Exact, Sequence
+             * @see 	Times, While, Until, ZeroOrOne, xfilters::Exact, Sequence
              */
-            class OneOrMore : public tokenizer_1
+            class OneOrMore : public tokenizer_1_t
             {
             public:
-                inline OneOrMore(tokenizer& toka) : tokenizer_1(toka) {}
+                inline OneOrMore(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -382,13 +399,13 @@ namespace xcore
              * 		Is('A') + ZeroOrOne(Is('B')) + Is('C') ; // "AC","ABC" are OK ,
              *"ADC" fails
              * @endcode
-             * @see 	Times, While, Until, ZeroOrOne, filters::Exact
+             * @see 	Times, While, Until, ZeroOrOne, xfilters::Exact
              * 		, Sequence
              */
-            class ZeroOrOne : public tokenizer_1
+            class ZeroOrOne : public tokenizer_1_t
             {
             public:
-                inline ZeroOrOne(tokenizer& toka) : tokenizer_1(toka) {}
+                inline ZeroOrOne(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             typedef ZeroOrOne Optional;
@@ -407,13 +424,13 @@ namespace xcore
              * 		Is('A') + While(Is('B')) + Is('C') ; // "AC","ABC"and "ABBC" are
              *OK , "ADC" fails
              * @endcode
-             * @see 	Times, While, Until, ZeroOrOne, filters::Exact
+             * @see 	Times, While, Until, ZeroOrOne, xfilters::Exact
              * 		, Sequence
              */
-            class While : public tokenizer_1
+            class While : public tokenizer_1_t
             {
             public:
-                inline While(tokenizer& toka) : tokenizer_1(toka) {}
+                inline While(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
             typedef While ZeroOrMore;
@@ -429,33 +446,33 @@ namespace xcore
              * 		Until(Is('C')) + Is('C') ; // "AC","AAC"and "ABBC" are OK , "" "D"
              * fails
              * @endcode
-             * @see 	Times, While, Until, ZeroOrOne, filters::Exact
+             * @see 	Times, While, Until, ZeroOrOne, xfilters::Exact
              * 		, Sequence
              */
-            class Until : public tokenizer_1
+            class Until : public tokenizer_1_t
             {
             public:
-                inline Until(tokenizer& toka) : tokenizer_1(toka) {}
+                inline Until(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             /*!
              * @class Extract
              * @brief	It is the extracting utility .. it returns the matched pattern
-             * to the supplied buffer ...
+             * to the supplied reader
              *
              * @b Example:
              * @code{.cpp}
-             * 		char buffer[1024];
-             * 		Extract(buffer,Is('C')) ; // if "C" .. buffer = "C"
+             * 		xtext::reader_t selection;
+             * 		Extract(selection, Is('C')) ; // if "C" .. selection = "C"
              * @endcode
              */
-            class Extract : public tokenizer_1
+            class Extract : public tokenizer_1_t
             {
-                stringreader_t& _Selection;
+                xtext::reader_t& m_selection;
 
             public:
-                inline Extract(stringreader_t& m1, tokenizer& toka) : tokenizer_1(toka), _Selection(m1) {}
+                inline Extract(xtext::reader_t& m1, tokenizer_t& toka) : tokenizer_1_t(toka), m_selection(m1) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -475,13 +492,13 @@ namespace xcore
              * 		ReturnToCallback(callback,Is('C')) ; //
              * @endcode
              */
-            typedef void (*CallBack)(stringreader_t&);
-            class ReturnToCallback : public tokenizer_1
+            typedef void (*CallBack)(xtext::reader_t&, xtext::reader_t::cursor_t&);
+            class ReturnToCallback : public tokenizer_1_t
             {
                 CallBack m_cb;
 
             public:
-                inline ReturnToCallback(Callback cb, tokenizer& toka) : tokenizer_1(toka), m_cb(cb) {}
+                inline ReturnToCallback(CallBack cb, tokenizer_t& toka) : tokenizer_1_t(toka), m_cb(cb) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -495,19 +512,19 @@ namespace xcore
              * 		Enclosed("<",">",Is('C')) ; // "<C>" OK ... "C" "<C" "C>" "[C]" fails
              * @endcode
              */
-            class Enclosed : public tokenizer_1
+            class Enclosed : public tokenizer_1_t
             {
-                stringreader_t m_open;
-                stringreader_t m_close;
+                xtext::reader_t m_open;
+                xtext::reader_t m_close;
 
             public:
-                inline Enclosed(tokenizer& toka) : tokenizer_1(toka), m_cb(cb) {}
+                inline Enclosed(xtext::reader_t open, xtext::reader_t close, tokenizer_t& toka) : tokenizer_1_t(toka), m_open(open), m_close(close) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
-        } // namespace manipulators
+        } // namespace xmanipulators
 
-        namespace filters
+        namespace xfilters
         {
             /*!
              * @class Any
@@ -520,13 +537,13 @@ namespace xcore
              * 		Any(); // "C" " " "#" OK ... never fails
              * @endcode
              */
-            class Any : public interface
+            class Any : public tokenizer_t
             {
             public:
                 Any() {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Any ANY;
+            extern Any sAny;
 
             /*!
              * @class In
@@ -539,13 +556,13 @@ namespace xcore
              * 		In("ABC"); // "A" , "B" or "C" OK ... "D" fails
              * @endcode
              */
-            class In : public interface
+            class In : public tokenizer_t
             {
-                stringreader_t m_input;
+                xtext::reader_t m_input;
 
             public:
                 In() {}
-                In(stringreader_t input) : m_input(input) {}
+                In(xtext::reader_t input) : m_input(input) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -562,7 +579,7 @@ namespace xcore
              * 		Between('A','C'); // "A" , "B" or "C" OK ... "D" fails
              * @endcode
              */
-            class Between : public interface
+            class Between : public tokenizer_t
             {
                 uchar32 m_lower;
                 uchar32 m_upper;
@@ -589,13 +606,16 @@ namespace xcore
              * 		Alphabet() ; // "A" , "B" or "C" are OK ... "9" and "#" fail
              * @endcode
              */
-            class Alphabet : public interface
+            class Alphabet : public tokenizer_t
             {
+                Between m_lower_case;
+                Between m_upper_case;
+
             public:
-                Alphabet() {}
+                Alphabet() : m_lower_case('a', 'z'), m_upper_case('A', 'Z') {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Alphabet ALPHABET;
+            extern Alphabet sAlphabet;
 
             /*!
              * @class Digit
@@ -608,13 +628,14 @@ namespace xcore
              * 		Digit() ; // "1" , "2" or "7" are OK ... "A" and "#" fail
              * @endcode
              */
-            class Digit : public interface
+            class Digit : public tokenizer_t
             {
+                Between m_digit; //@TODO; make static
             public:
-                Digit() {}
+                Digit() : m_digit('0', '9') {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Digit DIGIT;
+            extern Digit sDigit;
 
             // Class Octal
             /*!
@@ -627,13 +648,17 @@ namespace xcore
              * 		Hex() ; // "1" , "A" or "7" are OK ... "G" and "#" fail
              * @endcode
              */
-            class Hex : public interface
+            class Hex : public tokenizer_t
             {
+                Digit   m_digit;
+                Between m_lower_case;
+                Between m_upper_case;
+
             public:
-                Hex() {}
+                Hex() : m_lower_case('a', 'f'), m_upper_case('A', 'F') {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Hex HEX;
+            extern Hex sHex;
 
             /*!
              * @class AlphaNumeric
@@ -646,18 +671,18 @@ namespace xcore
              * 		AlphaNumeric() ; // "A" , "2" or "0" are OK ... " " and "#" fail
              * @endcode
              */
-            class AlphaNumeric : public interface
+            class AlphaNumeric : public tokenizer_t
             {
             public:
-                Hex() {}
+                AlphaNumeric() {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern AlphaNumeric ALPHANUMERIC;
+            extern AlphaNumeric sAlphaNumeric;
 
             /*!
              * @class Exact
              * @brief	Checks if the character unnder processing is following
-             * 			the specified charcters sequence in case sensitive
+             * 			the specified characters sequence in case sensitive
              * profile
              * 			.. it is identical to using
              * 			Is('...') + Is('...') + Is('...') + ...
@@ -667,13 +692,13 @@ namespace xcore
              * 		Exact("ABC") ; // "ABC" is OK ... "abc" or anything else fails
              * @endcode
              */
-            class Exact : public interface
+            class Exact : public tokenizer_t
             {
-                stringreader_t m_input;
+                xtext::reader_t m_input;
 
             public:
                 Exact() {}
-                Exact(stringreader_t input) : m_input(input) {}
+                Exact(xtext::reader_t input) : m_input(input) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -689,13 +714,17 @@ namespace xcore
              * 		Like("ABC") ; // "ABC" and "abc" are OK ... otherwise fails
              * @endcode
              */
-            class Like : public interface
+            class Like : public tokenizer_t
             {
-                stringreader_t m_input;
+                xtext::reader_t           m_input;
+                xtext::reader_t::cursor_t m_from;
+                xtext::reader_t::cursor_t m_to;
 
             public:
                 Like() {}
-                Like(stringreader_t input) : m_input(input) {}
+                Like(xtext::reader_t input) : m_input(input) {}
+                Like(xtext::reader_t input, xtext::reader_t::cursor_t to) : m_input(input), m_to(to) {}
+                Like(xtext::reader_t input, xtext::reader_t::cursor_t from, xtext::reader_t::cursor_t to) : m_input(input), m_from(from), m_to(to) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -711,13 +740,15 @@ namespace xcore
              * fail
              * @endcode
              */
-            class WhiteSpace : public interface
+            class WhiteSpace : public tokenizer_t
             {
+                In m_whitespace;
+
             public:
-                WhiteSpace() {}
+                WhiteSpace() : m_whitespace(" \t\n\r") {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern WhiteSpace WHITESPACE;
+            extern WhiteSpace sWhitespace;
 
             /*!
              * @class Is
@@ -729,13 +760,13 @@ namespace xcore
              * 		Is('A') ; // "A" are OK ... "a" or anything else fails
              * @endcode
              */
-            class Is : public interface
+            class Is : public tokenizer_t
             {
-                uchar32 m_letter;
+                uchar32 m_char;
 
             public:
-                Is() : m_letter(' ') {}
-                Is(uchar letter) : m_letter(letter) {}
+                Is() : m_char(' ') {}
+                Is(uchar c) : m_char(c) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -751,13 +782,13 @@ namespace xcore
              * 		Decimal() ; // "1" and "12" are OK ... "A" "-1" fails
              * @endcode
              */
-            class Decimal : public interface
+            class Decimal : public tokenizer_t
             {
             public:
                 Decimal() {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Decimal DECIMAL;
+            extern Decimal sDecimal;
 
             /*!
              * @class Word
@@ -771,13 +802,13 @@ namespace xcore
              * 		Word() ; // "1" and "12" are OK ... "A" "-1" fails
              * @endcode
              */
-            class Word : public interface
+            class Word : public tokenizer_t
             {
             public:
                 Word() {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Word WORD;
+            extern Word sWord;
 
             /*!
              * @class EndOfText
@@ -792,13 +823,13 @@ namespace xcore
              * end
              * @endcode
              */
-            class EndOfText : public interface
+            class EndOfText : public tokenizer_t
             {
             public:
                 EndOfText() {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern EndOfText EOT;
+            extern EndOfText sEOT;
 
             /*!
              * @class EndOfLine
@@ -807,13 +838,13 @@ namespace xcore
              *          Is('\\n') on Mac/Linux
              *
              */
-            class EndOfLine : public interface
+            class EndOfLine : public tokenizer_t
             {
             public:
                 EndOfLine() {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern EndOfLine EOL;
+            extern EndOfLine sEOL;
 
             /*!
              * @class Integer
@@ -827,15 +858,15 @@ namespace xcore
              * 		Integer(-1,15) ; // "0" "-1" "12" are OK ... "-2" or "16" fail
              * @endcode
              */
-            class Integer : public interface
+            class Integer : public tokenizer_t
             {
-                s32 m_min;
-                s32 m_max;
+                s64 m_min;
+                s64 m_max;
 
             public:
-                Integer() : m_min(0), max(0x7fffffff) {}
-                Integer(s32 max) : m_min(0), max(max) {}
-                Integer(s32 min, s32 max) : m_min(min), max(max) {}
+                Integer() : m_min(0), m_max(0x7fffffffffffffffL) {}
+                Integer(s64 max) : m_min(0), m_max(max) {}
+                Integer(s64 min, s64 max) : m_min(min), m_max(max) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
@@ -852,28 +883,28 @@ namespace xcore
              * or "16.3" fail
              * @endcode
              */
-            class Float : public interface
+            class Float : public tokenizer_t
             {
                 f32 m_min;
                 f32 m_max;
 
             public:
-                Float() : m_min(0.0f), max(3.402823e+38f) {}
-                Float(f32 max) : m_min(0.0f), max(max) {}
-                Float(f32 min, f32 max) : m_min(min), max(max) {}
+                Float() : m_min(0.0f), m_max(3.402823e+38f) {}
+                Float(f32 max) : m_min(0.0f), m_max(max) {}
+                Float(f32 min, f32 max) : m_min(min), m_max(max) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
 
             // namespace Date
 
-        } // namespace filters
+        } // namespace xfilters
 
         /*!
-         * @namespace 	utils
+         * @namespace 	xutils
          * @brief 		more comprehensive matching pattern elements that are
          * used usually in several development parsing/searching tasks
          */
-        namespace utils
+        namespace xutils
         {
             /*!
              * @struct Range
@@ -892,12 +923,21 @@ namespace xcore
              * 			(aaa.bbb.ccc.ddd)
              *
              */
-            class IPv4 : public interface
+            class IPv4 : public tokenizer_t
             {
+                xmanipulators::Within   m_d3;
+                xfilters::Integer       m_b8;
+                xmanipulators::And      m_sub;
+                xfilters::Is            m_dot;
+                xmanipulators::Sequence m_bad;
+                xmanipulators::Times    m_domain;
+                xmanipulators::Sequence m_ipv4;
+
             public:
+                IPv4() : m_d3(1, 3, xfilters::sDigit), m_b8(255), m_sub(m_d3, m_b8), m_dot('.'), m_bad(m_sub, m_dot), m_domain(3, m_bad), m_ipv4(m_domain, m_sub) {}
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern IPv4 IPV4;
+            extern IPv4 sIPv4;
 
             /*!
              * @class Host
@@ -905,12 +945,12 @@ namespace xcore
              * 			(server.domain.com) (127.0.0.1)
              *
              */
-            class Host : public interface
+            class Host : public tokenizer_t
             {
             public:
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Host HOST;
+            extern Host sHost;
 
             /*!
              * @class Email
@@ -918,12 +958,12 @@ namespace xcore
              * 			(abc@host.com)
              *
              */
-            class Email : public interface
+            class Email : public tokenizer_t
             {
             public:
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Email EMAIL;
+            extern Email sEmail;
 
             /*!
              * @class Phone
@@ -931,12 +971,12 @@ namespace xcore
              * 			(+(123)555 443 2 22)
              *
              */
-            class Phone : public interface
+            class Phone : public tokenizer_t
             {
             public:
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Phone PHONE;
+            extern Phone sPhone;
 
             /*!
              * @class ServerAddress
@@ -944,12 +984,12 @@ namespace xcore
              * 			(host@domain.com:12345)
              *
              */
-            class ServerAddress : public interface
+            class ServerAddress : public tokenizer_t
             {
             public:
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern ServerAddress SERVERADDRESS;
+            extern ServerAddress sServerAddress;
 
             /*!
              * @class URI
@@ -957,50 +997,49 @@ namespace xcore
              * 			(proto:abc@host.domain.com:4444)
              *
              */
-            class Uri : public interface
+            class Uri : public tokenizer_t
             {
             public:
                 virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
             };
-            extern Uri URI;
+            extern Uri sURI;
+        } // namespace xutils
+    }     // namespace xparser
 
-        } // namespace utils
-
-    } // namespace parser
-
-    class stringprocessor
+    class stringprocessor_t
     {
     private:
-        stringreader_t m_string;
-        stringreader_t m_cursor;
-        stringreader_t m_lastTokenized;
+        xtext::reader_t           m_string;
+        xtext::reader_t::cursor_t m_cursor;
+        xtext::reader_t::cursor_t m_lastTokenized;
 
     public:
-        stringprocessor();
-        stringprocessor(stringreader_t const& str);
+        stringprocessor_t();
+        stringprocessor_t(xtext::reader_t const& str);
+        stringprocessor_t(xtext::reader_t const& str, xtext::reader_t::cursor_t cursor);
 
-        bool         Parse(tokenizer::tokenizer&);
-        bool         Validate(tokenizer::tokenizer&);
-        stringreader_t Search(tokenizer::tokenizer&);
-        bool         IsEOT();
-        void         Reset();
+        bool            parse(xparser::tokenizer_t&);
+        bool            validate(xparser::tokenizer_t&);
+        xtext::reader_t search(xparser::tokenizer_t&);
+        bool            isEOT();
+        void            reset();
     };
 
-    inline xcore::tokenizer::manipulators::Times  operator*(xcore::tokenizer::tokenizer& tok, s32 times) { return xcore::tokenizer::manipulators::Times(times, tok); }
-    inline xcore::tokenizer::manipulators::Times  operator*(s32 times, xcore::tokenizer::tokenizer& tok) { return xcore::tokenizer::manipulators::Times(times, tok); }
-    inline xcore::tokenizer::manipulators::Within operator*(xcore::tokenizer::tokenizer& tok, const xcore::tokenizer::utils::Range& range)
+    inline xcore::xparser::xmanipulators::Times  operator*(xcore::xparser::tokenizer_t& tok, s32 times) { return xcore::xparser::xmanipulators::Times(times, tok); }
+    inline xcore::xparser::xmanipulators::Times  operator*(s32 times, xcore::xparser::tokenizer_t& tok) { return xcore::xparser::xmanipulators::Times(times, tok); }
+    inline xcore::xparser::xmanipulators::Within operator*(xcore::xparser::tokenizer_t& tok, const xcore::xparser::xutils::Range& range)
     {
-        return xcore::tokenizer::manipulators::Within(range._Min, range._Max, tok);
+        return xcore::xparser::xmanipulators::Within(range.m_min, range.m_max, tok);
     }
-    inline xcore::tokenizer::manipulators::Within operator*(xcore::tokenizer::utils::Range& range, xcore::tokenizer::tokenizer& tok)
+    inline xcore::xparser::xmanipulators::Within operator*(xcore::xparser::xutils::Range& range, xcore::xparser::tokenizer_t& tok)
     {
-        return xcore::tokenizer::manipulators::Within(range._Min, range._Max, tok);
+        return xcore::xparser::xmanipulators::Within(range.m_min, range.m_max, tok);
     }
 
-    inline xcore::tokenizer::manipulators::Or       operator|(xcore::tokenizer::tokenizer& t1, xcore::tokenizer::tokenizer& t2) { return xcore::tokenizer::manipulators::Or(t1, t2); }
-    inline xcore::tokenizer::manipulators::And      operator&(xcore::tokenizer::tokenizer& t1, xcore::tokenizer::tokenizer& t2) { return xcore::tokenizer::manipulators::And(t1, t2); }
-    inline xcore::tokenizer::manipulators::Sequence operator+(xcore::tokenizer::tokenizer& t1, xcore::tokenizer::tokenizer& t2) { return xcore::tokenizer::manipulators::Sequence(t1, t2); }
-    inline xcore::tokenizer::manipulators::Not      operator!(xcore::tokenizer::tokenizer& tok) { return xcore::tokenizer::manipulators::Not(tok); }
+    inline xcore::xparser::xmanipulators::Or       operator|(xcore::xparser::tokenizer_t& t1, xcore::xparser::tokenizer_t& t2) { return xcore::xparser::xmanipulators::Or(t1, t2); }
+    inline xcore::xparser::xmanipulators::And      operator&(xcore::xparser::tokenizer_t& t1, xcore::xparser::tokenizer_t& t2) { return xcore::xparser::xmanipulators::And(t1, t2); }
+    inline xcore::xparser::xmanipulators::Sequence operator+(xcore::xparser::tokenizer_t& t1, xcore::xparser::tokenizer_t& t2) { return xcore::xparser::xmanipulators::Sequence(t1, t2); }
+    inline xcore::xparser::xmanipulators::Not      operator!(xcore::xparser::tokenizer_t& tok) { return xcore::xparser::xmanipulators::Not(tok); }
 
 } // namespace xcore
 

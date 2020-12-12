@@ -20,20 +20,19 @@ UNITTEST_SUITE_BEGIN(test_xparser)
 
 		UNITTEST_TEST(test_parse_phone_number)
 		{
-			stringreader reader("+(123)555 443 2 22");
-			stringprocessor processor(reader);
-			CHECK_TRUE(processor.Parse(parser::utils::Phone()));
-		}
+			xtext::reader_t reader("+(123)555 443 2 22");
+			stringprocessor_t processor(reader);
+            CHECK_TRUE(processor.parse(xparser::xutils::sPhone));
+        }
 
 		UNITTEST_TEST(test_search_phone_number)
 		{
-			stringreader reader("Name: John Doe, Phone: +(123)555 443 2 22, Occupation: Software Engineer");
-			stringprocessor processor(reader);
-			stringreader selection = processor.Search(parser::utils::Phone());
-			stringreader phonenr("+(123)555 443 2 22");
-			CHECK_TRUE(phonenr == selection);
+			xtext::reader_t reader("Name: John Doe, Phone: +(123)555 443 2 22, Occupation: Software Engineer");
+			stringprocessor_t processor(reader);
+            xtext::reader_t selection = processor.search(xparser::xutils::sPhone);
+            xtext::reader_t phonenr("+(123)555 443 2 22");
+            CHECK_TRUE(phonenr == selection);
 		}
-
 	}
 }
 UNITTEST_SUITE_END
