@@ -42,8 +42,9 @@ struct item
 
     u64     m_left;
     u64     m_right;
+    state   m_state;
 
-    void    parse_setup(parser& p, state& s)
+    void    parse_setup(parser& p)
     {
         // Character conversion
         p.convert('.', '0', SILENT);
