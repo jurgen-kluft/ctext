@@ -416,7 +416,7 @@ namespace xcore
              * @brief	it checks if the contained pattern is exist or not .. both cases
              *are acceptable.. it is like checking for optional item multiple times in
              *repititive pattern in contrast to ZeroOrOne
-             *			 ..but if it is existing it must compley the rule
+             *			 ..but if it is existing it must comply the rule
              *specified , It is identical to using "Within(0,-1,...)"
              *
              * @b Example:
