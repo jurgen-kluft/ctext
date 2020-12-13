@@ -1,151 +1,9 @@
+#include "xbase/x_runes.h"
+#include "xbase/x_runes.h"
 #include "xtext/x_parser.h"
 
 namespace xcore
 {
-    namespace xtext
-    {
-        enum echartype
-        {
-            NONE = -1,
-            ASCII = 0,
-            UTF8 = 1,
-            UTF16 = 2,
-            UTF32 = 4
-        };
-
-        reader_t::reader_t() : m_type(ASCII) {}
-
-        reader_t::reader_t(const char *str) : m_type(ASCII)
-        {
-            if (str != nullptr)
-            {
-                m_runes.m_ascii = ascii::crunes(str);
-                m_begin.m_cursor.m_ascii = m_runes.m_ascii.m_str;
-                m_end.m_cursor.m_ascii = m_runes.m_ascii.m_end;
-            }
-        }
-
-        reader_t::reader_t(utf32::pcrune str) : m_type(UTF32)
-        {
-            if (str != nullptr)
-            {
-                m_runes.m_utf32 = utf32::crunes(str);
-                m_begin.m_cursor.m_utf32 = m_runes.m_utf32.m_str;
-                m_end.m_cursor.m_utf32 = m_runes.m_utf32.m_end;
-            }
-        }
-
-        reader_t::reader_t(const reader_t &t) : m_type(t.m_type), m_begin(t.m_begin), m_end(t.m_end) { m_runes.m_ascii = t.m_runes.m_ascii; }
-
-        reader_t::reader_t(const reader_t &t, const cursor_t &begin, const cursor_t &end) : m_type(t.m_type), m_begin(begin), m_end(end)
-        {
-            m_runes.m_ascii = t.m_runes.m_ascii;
-            //@TODO: validate begin and end
-        }
-
-        reader_t::cursor_t reader_t::get_cursor() const { return m_begin; }
-
-        s64 reader_t::size() const
-        {
-            switch (m_type)
-            {
-            case ASCII:
-                return m_runes.m_ascii.is_empty() ? 0 : m_runes.m_ascii.size();
-            case UTF32:
-                return m_runes.m_utf32.is_empty() ? 0 : m_runes.m_utf32.size();
-            }
-            return 0;
-        }
-
-        void reader_t::reset(cursor_t &cursor) const { cursor = m_begin; }
-
-        bool reader_t::valid(cursor_t const &cursor) const { return cursor >= m_begin && cursor < m_end; }
-
-        uchar32 reader_t::peek(cursor_t const &cursor) const
-        {
-            uchar32 c = '\0';
-            if (valid(cursor))
-            {
-                switch (m_type)
-                {
-                case ASCII:
-                    c = *cursor.m_cursor.m_ascii;
-                    break;
-                case UTF32:
-                    c = *cursor.m_cursor.m_utf32;
-                    break;
-                }
-            }
-            return c;
-        }
-
-        uchar32 reader_t::read(cursor_t &cursor) const
-        {
-            uchar32 c = '\0';
-            if (valid(cursor))
-            {
-                c = peek(cursor);
-                skip(cursor);
-            }
-            return c;
-        }
-
-        void reader_t::skip(cursor_t &cursor) const
-        {
-            if (valid(cursor))
-            {
-                switch (m_type)
-                {
-                case ASCII:
-                    cursor.m_cursor.m_ascii++;
-                    break;
-                case UTF32:
-                    cursor.m_cursor.m_utf32++;
-                    break;
-                }
-            }
-        }
-
-        reader_t reader_t::select(cursor_t const &from, cursor_t const &to) const
-        {
-            reader_t reader;
-            reader.m_type = reader.m_type;
-            reader.m_runes.m_ascii = m_runes.m_ascii;
-            //@todo: reader.m_begin
-            //@todo: reader.m_end
-            if (valid(from))
-            {
-            }
-
-            return reader;
-        }
-
-        reader_t &reader_t::operator=(const reader_t &other)
-        {
-            m_type = other.m_type;
-            m_runes.m_ascii = other.m_runes.m_ascii;
-            m_begin = other.m_begin;
-            m_end = other.m_end;
-            return *this;
-        }
-
-        bool reader_t::operator==(const reader_t &other) const { return other.m_type == m_type && other.m_runes.m_ascii == m_runes.m_ascii && other.m_begin == m_begin && other.m_end == m_end; }
-        bool reader_t::operator!=(const reader_t &other) const { return other.m_type != m_type || other.m_runes.m_ascii != m_runes.m_ascii || other.m_begin != m_begin || other.m_end != m_end; }
-
-        reader_t::cursor_t &reader_t::cursor_t::operator=(const reader_t::cursor_t &t)
-        {
-            m_cursor = t.m_cursor;
-            return *this;
-        }
-
-        bool reader_t::cursor_t::operator<(const reader_t::cursor_t &t) const { return m_cursor.m_ascii < t.m_cursor.m_ascii; }
-        bool reader_t::cursor_t::operator>(const reader_t::cursor_t &t) const { return m_cursor.m_ascii > t.m_cursor.m_ascii; }
-        bool reader_t::cursor_t::operator<=(const reader_t::cursor_t &t) const { return m_cursor.m_ascii <= t.m_cursor.m_ascii; }
-        bool reader_t::cursor_t::operator>=(const reader_t::cursor_t &t) const { return m_cursor.m_ascii >= t.m_cursor.m_ascii; }
-        bool reader_t::cursor_t::operator==(const reader_t::cursor_t &t) const { return m_cursor.m_ascii == t.m_cursor.m_ascii; }
-        bool reader_t::cursor_t::operator!=(const reader_t::cursor_t &t) const { return m_cursor.m_ascii != t.m_cursor.m_ascii; }
-    } // namespace xtext
-
     namespace xparser
     {
         xfilters::Any xfilters::sAny;
@@ -314,18 +172,17 @@ namespace xcore
                 if (!_reader.valid(_cursor))
                     return false;
 
+                xtext::reader_t::cursor_t inputcursor = m_input.get_cursor();
                 uchar32 const s = _reader.peek(_cursor);
-                m_input.reset(_cursor);
-                while (m_input.valid(_cursor))
+                while (m_input.valid(inputcursor))
                 {
-                    uchar32 const c = m_input.read(_cursor);
+                    uchar32 const c = m_input.read(inputcursor);
                     if (c == s)
                     {
                         _reader.skip(_cursor);
                         return true;
                     }
                 }
-
                 return false;
             }
 
@@ -357,7 +214,12 @@ namespace xcore
                 }
                 return true;
             }
-            bool AlphaNumeric::Check(xtext::reader_t &_reader, xtext::reader_t::cursor_t &_cursor) { return (sAlphabet | sDigit).Check(_reader, _cursor); }
+
+            bool AlphaNumeric::Check(xtext::reader_t &_reader, xtext::reader_t::cursor_t &_cursor) 
+            {
+                xmanipulators::Or r(sAlphabet, sDigit);
+                return r.Check(_reader, _cursor);
+            }
 
             bool Exact::Check(xtext::reader_t &_reader, xtext::reader_t::cursor_t &_cursor)
             {
@@ -435,6 +297,7 @@ namespace xcore
                     if (!utf32::is_digit(c))
                         break;
                     value = (value * 10) + utf32::to_digit(c);
+                    _reader.skip(cursor);
                 }
                 if (cursor == _cursor)
                     return false;
@@ -533,30 +396,20 @@ namespace xcore
             }
             bool Phone::Check(xtext::reader_t &_reader, xtext::reader_t::cursor_t &_cursor)
             {
-                /*
-                ZeroOrMore zom_plus(Is('+'));
+                Is         plus('+');
+                ZeroOrMore zom_plus(plus);
                 Is         open('(');
                 Is         close('(');
-                OneOrMore  oomdigit(sDIGIT);
+                OneOrMore  oomdigit(xfilters::sDigit);
                 Sequence3  open_oomdigit_close(open, oomdigit, close);
                 ZeroOrMore zom_open_oomdigit_close(open_oomdigit_close);
-                ZeroOrMore zom_whitespace(sWHITESPACE);
+                ZeroOrMore zom_whitespace(sWhitespace);
                 In         spaceordash(" -");
                 Sequence   spaceordash_oomdigit(spaceordash, oomdigit);
                 ZeroOrMore zom_spaceordash_oomdigit(spaceordash_oomdigit);
 
                 Sequence zom_open_oomdigit_close_whitespace(zom_open_oomdigit_close, zom_whitespace);
-                
-                ZeroOrMore(Is('+')) + 
-                (
-                    ZeroOrMore(Is('(') + OneOrMore(DIGIT) + Is(')')) +
-                    ZeroOrMore(WHITESPACE)
-                    ) + 
-                    OneOrMore(DIGIT) + 
-                    ZeroOrMore(In(" -") + OneOrMore(DIGIT))
-*/
-                //return (ZeroOrMore(Is(('+'))) + (ZeroOrMore(Is('(') + OneOrMore(DIGIT) + Is(')')) + ZeroOrMore(WHITESPACE)) + OneOrMore(DIGIT) + ZeroOrMore(In(" -") + OneOrMore(DIGIT)))
-                //    .Check(_reader, _cursor);
+                return zom_open_oomdigit_close_whitespace.Check(_reader, _cursor);
             }
 
             /*
@@ -574,150 +427,6 @@ namespace xcore
              */
         } // namespace xutils
     }     // namespace xparser
-
-    namespace parser_design
-    {
-        class machine_t
-        {
-            machine_t &PushOpcode(int opcode);
-            enum
-            {
-                ePop,
-                eNot,
-                eOr,
-                eAnd,
-                eSequence,
-                eSequence3,
-                eWithin,
-                eTimes,
-                eOneOrMore,
-                eZeroOrOne,
-                eWhile,
-                eUntil,
-                eExtract,
-                eReturnToCallback,
-                eEnclosed,
-                eAny,
-                eIn,
-                eBetween,
-                eAlphabet,
-                eDigit,
-                eHex,
-                eAlphaNumeric,
-                eExact,
-                eLike,
-                eWhiteSpace,
-                eIs,
-                eDecimal,
-                eWord,
-                eEndOfText,
-                eEndOfLine,
-                eInteger,
-                eFloat,
-                eIPv4,
-                eHost,
-                eEmail,
-                ePhone,
-                eServerAddress,
-                eUri
-            };
-
-        public:
-            bool execute(xtext::reader_t const &reader, xtext::reader_t::cursor_t &cursor);
-
-            machine_t &Pop();
-            machine_t &Not();
-            machine_t &Or();
-            machine_t &And();
-            machine_t &Sequence();
-            machine_t &Within(s32 _min = 0, s32 _max = 0x7fffffff);
-            machine_t &Times(s32 _count);
-            machine_t &OneOrMore();
-            machine_t &ZeroOrOne();
-            machine_t &While();
-            machine_t &Until();
-            machine_t &Extract();
-            machine_t &Enclosed(uchar32 _open, u32char _close);
-            machine_t &Any();
-            machine_t &In(xtext::reader const &_chars);
-            machine_t &Between(uchar32 _from, u32char _until);
-            machine_t &Alphabet();
-            machine_t &Digit();
-            machine_t &Hex();
-            machine_t &AlphaNumeric();
-            machine_t &Exact(xtext::reader const &_text); // Case-Sensitive
-            machine_t &Like(xtext::reader const &_text);  // Case-Insensitive
-            machine_t &WhiteSpace();
-            machine_t &Is(uchar32 _c);
-            machine_t &Word();
-            machine_t &EndOfText();
-            machine_t &EndOfLine();
-            machine_t &Unsigned32(u32 _min = 0, u32 _max = 0xffffffff);
-            machine_t &Unsigned64(u64 _min = 0, u64 _max = 0xffffffffffffffffUL);
-            machine_t &Integer32(s32 _min = 0, s32 _max = 0x7fffffff);
-            machine_t &Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL);
-            machine_t &Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f);
-            machine_t &Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f);
-
-            machine_t &Email();
-            machine_t &Host();
-
-            //machine_t &Date();
-            //machine_t &Time();
-            //machine_t &IPv4();
-            //machine_t &Phone();
-            //machine_t &ServerAddress();
-            //machine_t &URI();
-        };
-
-        static void use_case()
-        {
-            static const char *sValidEmailUriChars = "!#$%&'*+/=?^_`{|}~-";
-
-            // Example: This is the run that can validate an email addresse
-            // Comment: Pretty and readable :-)
-            // Thoughts: We can even precompile certain runs to be reused
-
-            // Q: How to extract certain parts?
-
-            // clang-format off
-            machine_t p;
-            p.Or();
-                p.AlphaNumeric();
-                p.In(sValidEmailUriChars)
-            p.Pop();
-
-            machine_t m;
-            m.Sequence();
-                m.Extract();        // e.g. john.doe
-                    m.OneOrMore();
-                        m.Run(p);
-                    m.Pop();
-                    m.ZeroOrMore();
-                        m.Sequence();
-                            m.Or();
-                                m.Is('.');
-                                m.Is('_');
-                            m.Pop();
-                            m.Run(p);
-                        m.Pop();
-                    m.Pop();
-                m.Pop();
-
-                m.Is('@');
-                m.Extract();        // e.g. hotmail.com
-                    m.Host();
-                m.Pop();
-            m.Pop();
-
-            // clang-format on
-
-            xtext::reader_t reader;
-            xtext::reader_t::cursor_t cursor;
-            m.execute(reader, cursor);
-        }
-
-    } // namespace parser_design
 
     using namespace xcore::xparser;
 
