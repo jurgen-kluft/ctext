@@ -7,7 +7,8 @@
 #include "xunittest/private/ut_ReportAssert.h"
 
 UNITTEST_SUITE_LIST(xTextTest);
-UNITTEST_SUITE_DECLARE(xTextTest, test_xparser);
+UNITTEST_SUITE_DECLARE(xTextTest, test_parser);
+UNITTEST_SUITE_DECLARE(xTextTest, test_parser2);
 
 namespace xcore
 {

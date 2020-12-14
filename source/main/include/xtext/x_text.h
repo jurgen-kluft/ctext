@@ -127,7 +127,7 @@ namespace xcore
         private:
             union crunes
             {
-                inline crunes() : m_ascii(nullptr) {}
+                inline crunes() : m_ascii() {}
                 ascii::crunes m_ascii;
                 utf8::crunes  m_utf8;
                 utf16::crunes m_utf16;

@@ -7,7 +7,7 @@ using namespace xcore;
 
 extern xcore::xalloc* gTestAllocator;
 
-UNITTEST_SUITE_BEGIN(test_xparser)
+UNITTEST_SUITE_BEGIN(test_parser)
 {
 	UNITTEST_FIXTURE(main)
 	{

@@ -130,9 +130,11 @@ namespace xcore
                 xtext::reader_t::cursor_t end = _cursor;
 
                 bool result = m_tokenizer_a.Check(_reader, end);
-                m_selection = _reader.select(_cursor, end);
-
-                _cursor = end;
+				if (result)
+				{
+					m_selection = _reader.select(_cursor, end);
+					_cursor = end;
+				}
                 return result;
             }
 
@@ -140,10 +142,11 @@ namespace xcore
             {
                 xtext::reader_t::cursor_t start = _cursor;
                 bool result = m_tokenizer_a.Check(_reader, start);
-
-                m_cb(_reader, start);
-
-                _cursor = start;
+				if (result)
+				{
+					m_cb(_reader, start);
+					_cursor = start;
+				}
                 return result;
             }
 
@@ -412,19 +415,16 @@ namespace xcore
                 return zom_open_oomdigit_close_whitespace.Check(_reader, _cursor);
             }
 
-            /*
+            bool ServerAddress::Check(xtext::reader_t& _reader, xtext::reader_t::cursor_t& _cursor)
+            {
+				return false;
+            }
 
-                        bool ServerAddress::Check(xtext::reader_t& _reader, xtext::reader_t::cursor_t& _cursor)
-                        {
-                            return (HOST + ZeroOrOne(Is(':') + Integer(1, 65535))).Check(_reader, _cursor);
-                        }
+            bool Uri::Check(xtext::reader_t& _reader, xtext::reader_t::cursor_t& _cursor)
+            {
+				return false;
+            }
 
-                        bool Uri::Check(xtext::reader_t& _reader, xtext::reader_t::cursor_t& _cursor)
-                        {
-                            return (OneOrMore(ALPHANUMERIC) + Is(':') + (OneOrMore(ALPHANUMERIC | In(sValidEmailUriChars)) + ZeroOrMore(Is('.') + (ALPHANUMERIC | In(sValidEmailUriChars))))
-               + Is('@') + SERVERADDRESS) .Check(_reader, _cursor);
-                        }
-             */
         } // namespace xutils
     }     // namespace xparser
 
