@@ -99,10 +99,10 @@ namespace xcore
             reader_t();
             reader_t(const char* str);
             reader_t(utf32::pcrune str);
-            reader_t(ascii::crunes const& str);
+            reader_t(ascii::crunes_t const& str);
             reader_t(utf8::crunes const& str);
             reader_t(utf16::crunes const& str);
-            reader_t(utf32::crunes const& str);
+            reader_t(utf32::crunes_t const& str);
             reader_t(const writer_t&);
             reader_t(const reader_t&);
             reader_t(const reader_t&, const cursor_t& begin, const cursor_t& end);
@@ -128,10 +128,10 @@ namespace xcore
             union crunes
             {
                 inline crunes() : m_ascii() {}
-                ascii::crunes m_ascii;
+                ascii::crunes_t m_ascii;
                 utf8::crunes  m_utf8;
                 utf16::crunes m_utf16;
-                utf32::crunes m_utf32;
+                utf32::crunes_t m_utf32;
             };
             crunes   m_runes;
             s32      m_type;
