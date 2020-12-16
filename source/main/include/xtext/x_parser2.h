@@ -7,14 +7,10 @@
 
 #include "xbase/x_buffer.h"
 #include "xbase/x_va_list.h"
+#include "xbase/x_runes.h"
 
 namespace xcore
 {
-    namespace xtext
-    {
-        class reader_t;
-    }
-
     namespace xparser
     {
         // Minimal parser interface / API
@@ -22,7 +18,7 @@ namespace xcore
         {
             xbuffer m_buffer;
 
-            bool      Parse(xtext::reader_t&);
+            bool      Parse(runes_reader_t&);
             parser_t& Extract(x_va_r const& var);
             parser_t& Pop();
             parser_t& Not();
@@ -38,14 +34,14 @@ namespace xcore
             parser_t& Until();
             parser_t& Enclosed(uchar32 _open, uchar32 _close);
             parser_t& Any();
-            parser_t& In(reader_t const& _chars);
+            parser_t& In(runes_reader_t const& _chars);
             parser_t& Between(uchar32 _from, uchar32 _until);
             parser_t& Alphabet();
             parser_t& Digit();
             parser_t& Hex();
             parser_t& AlphaNumeric();
-            parser_t& Exact(reader_t const& _text);
-            parser_t& Like(reader_t const& _text);
+            parser_t& Exact(runes_reader_t const& _text);
+            parser_t& Like(runes_reader_t const& _text);
             parser_t& WhiteSpace();
             parser_t& Is(uchar32 _c);
             parser_t& Word();

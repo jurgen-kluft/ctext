@@ -2,12 +2,9 @@
 #include "xbase/x_debug.h"
 #include "xbase/x_buffer.h"
 #include "xbase/x_runes.h"
-#include "xtext/x_text.h"
 
 namespace xcore
 {
-    using namespace xtext;
-
     namespace xparser
     {
         class machine_t
@@ -150,7 +147,7 @@ namespace xcore
                     m_writer.write(opb);
                     return offset;
                 }
-                u16 write(reader_t const&) { return 0; }
+                u16 write(runes_reader_t const&) { return 0; }
                 s32 read_s32(instr_t& instr, s32 i)
                 {
                     s32 value;
@@ -188,10 +185,10 @@ namespace xcore
                     m_reader.read(value);
                     return value;
                 }
-                reader_t read_reader(instr_t& instr, s32 i) { return reader_t(); }
+                runes_reader_t read_reader(instr_t& instr, s32 i) { return runes_reader_t(); }
             };
 
-            writer_t* get_writer(u32 channel) { return nullptr; }
+            runes_writer_t* get_writer(u32 channel) { return nullptr; }
 
             s32        m_pc;
             s32        m_code_size;
@@ -204,13 +201,15 @@ namespace xcore
 
             struct context_t
             {
-                context_t(reader_t const& _reader, reader_t::cursor_t& _cursor)
+                context_t(runes_reader_t const& _reader)
                     : reader(_reader)
-                    , cursor(_cursor)
                 {
                 }
-                const reader_t&     reader;
-                reader_t::cursor_t& cursor;
+
+                crunes_t::ptr_t get_cursor() const { return reader.get_cursor(); }
+                void            set_cursor(crunes_t::ptr_t const& c) { reader.set_cursor(c); }
+
+                runes_reader_t reader;
             };
 
             void handle_pop(eOpcode o)
@@ -254,9 +253,10 @@ namespace xcore
             }
 
         public:
-            bool execute(reader_t const& reader, reader_t::cursor_t& cursor)
+            bool execute(runes_reader_t const& reader, crunes_t::ptr_t& cursor)
             {
-                context_t ctxt(reader, cursor);
+                context_t ctxt(reader);
+                ctxt.reader.set_cursor(cursor);
                 return fnExec(ctxt);
             }
 
@@ -275,14 +275,14 @@ namespace xcore
             machine_t& Extract(u32 channel) { return emit_instr(eTimes, (u32)channel); }
             machine_t& Enclosed(uchar32 _open, uchar32 _close) { return emit_instr(eEnclosed, (u32)_open, (u32)_close); }
             machine_t& Any() { return emit_instr(eAny); }
-            machine_t& In(reader_t const& _chars) { return emit_instr(eIn, _chars); }
+            machine_t& In(runes_reader_t const& _chars) { return emit_instr(eIn, _chars); }
             machine_t& Between(uchar32 _from, uchar32 _until) { return emit_instr(eBetween, (u32)_from, (u32)_until); }
             machine_t& Alphabet() { return emit_instr(eAlphabet); }
             machine_t& Digit() { return emit_instr(eDigit); }
             machine_t& Hex() { return emit_instr(eHex); }
             machine_t& AlphaNumeric() { return emit_instr(eAlphaNumeric); }
-            machine_t& Exact(reader_t const& _text) { return emit_instr(eExact, _text); }
-            machine_t& Like(reader_t const& _text) { return emit_instr(eLike, _text); }
+            machine_t& Exact(runes_reader_t const& _text) { return emit_instr(eExact, _text); }
+            machine_t& Like(runes_reader_t const& _text) { return emit_instr(eLike, _text); }
             machine_t& WhiteSpace() { return emit_instr(eWhiteSpace); }
             machine_t& Is(uchar32 _c) { return emit_instr(eIs, _c); }
             machine_t& Word() { return emit_instr(eWord); }
@@ -319,14 +319,14 @@ namespace xcore
             bool fnExtract(context_t& ctxt, u32 channel);
             bool fnEnclosed(context_t& ctxt, uchar32 _open, uchar32 _close);
             bool fnAny(context_t& ctxt);
-            bool fnIn(context_t& ctxt, reader_t const& _chars);
+            bool fnIn(context_t& ctxt, runes_reader_t& _chars);
             bool fnBetween(context_t& ctxt, uchar32 _from, uchar32 _until);
             bool fnAlphabet(context_t& ctxt);
             bool fnDigit(context_t& ctxt);
             bool fnHex(context_t& ctxt);
             bool fnAlphaNumeric(context_t& ctxt);
-            bool fnExact(context_t& ctxt, reader_t const& _text); // Case-Sensitive
-            bool fnLike(context_t& ctxt, reader_t const& _text);  // Case-Insensitive
+            bool fnExact(context_t& ctxt, runes_reader_t& _text); // Case-Sensitive
+            bool fnLike(context_t& ctxt, runes_reader_t& _text);  // Case-Insensitive
             bool fnWhiteSpace(context_t& ctxt);
             bool fnIs(context_t& ctxt, uchar32 _c);
             bool fnWord(context_t& ctxt);
@@ -342,13 +342,14 @@ namespace xcore
 
         machine_t& machine_t::Email()
         {
+            runes_reader_t validchars((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 19);
             // clang-format off
             Sequence();
                 Extract(0);        // e.g. john.doe
                     OneOrMore();
                         Or();
                             AlphaNumeric();
-                            In("!#$%&'*+/=?^_`{|}~-");
+                            In(validchars);
                         Pop();
                     Pop();
                     ZeroOrMore();
@@ -358,7 +359,7 @@ namespace xcore
                         Pop();
                         Or();
                             AlphaNumeric();
-                            In("!#$%&'*+/=?^_`{|}~-");
+                            In(validchars);
                         Pop();
                     Pop();
                 Pop();
@@ -493,29 +494,29 @@ namespace xcore
 
         bool machine_t::fnAnd(context_t& ctxt)
         {
-            reader_t::cursor_t const cursor = ctxt.cursor;
-            reader_t::cursor_t       best   = ctxt.cursor;
+            crunes_t::ptr_t const cursor = ctxt.get_cursor();
+            crunes_t::ptr_t       best   = ctxt.get_cursor();
             while (!fnOpcodeIs(machine_t::ePop))
             {
-                ctxt.cursor = cursor;
+                ctxt.set_cursor(cursor);
                 if (!fnExec(ctxt))
                 {
-                    ctxt.cursor = cursor;
+                    ctxt.set_cursor(cursor);
                     return false;
                 }
-                best = ctxt.cursor.furthest(best);
+                best = ctxt.get_cursor().furthest(best);
             }
             return true;
         }
 
         bool machine_t::fnSequence(context_t& ctxt)
         {
-            reader_t::cursor_t start = ctxt.cursor;
+            crunes_t::ptr_t start = ctxt.get_cursor();
             while (!fnOpcodeIs(ePop))
             {
                 if (!fnExec(ctxt))
                 {
-                    ctxt.cursor = start;
+                    ctxt.get_cursor() = start;
                     return false;
                 }
             }
@@ -524,16 +525,16 @@ namespace xcore
 
         bool machine_t::fnWithin(context_t& ctxt, s32 _min, s32 _max)
         {
-            reader_t::cursor_t const cursor = ctxt.cursor;
-            s32                      pc     = m_pc;
-            s32                      i      = 0;
+            crunes_t::ptr_t const cursor = ctxt.get_cursor();
+            s32                   pc     = m_pc;
+            s32                   i      = 0;
             while (i < _max)
             {
                 do
                 {
                     if (!fnExec(ctxt))
                     {
-                        ctxt.cursor = cursor;
+                        ctxt.set_cursor(cursor);
                         return false;
                     }
                 } while (!fnOpcodeIs(ePop));
@@ -545,7 +546,7 @@ namespace xcore
             if (i >= _min && i <= _max)
                 return true;
 
-            ctxt.cursor = cursor;
+            ctxt.set_cursor(cursor);
             return false;
         }
         bool machine_t::fnTimes(context_t& ctxt, s32 _count) { return fnWithin(ctxt, _count, _count); }
@@ -555,9 +556,9 @@ namespace xcore
         bool machine_t::fnWhile(context_t& ctxt) { return fnWithin(ctxt, 0, 0x7fffffff); }
         bool machine_t::fnUntil(context_t& ctxt)
         {
-            reader_t::cursor_t const cursor = ctxt.cursor;
-            s32                      pc     = m_pc;
-            s32                      i      = 0;
+            crunes_t::ptr_t const cursor = ctxt.get_cursor();
+            s32                   pc     = m_pc;
+            s32                   i      = 0;
             while (!fnEndOfText(ctxt))
             {
                 do
@@ -569,15 +570,15 @@ namespace xcore
                 if (fnOpcodeIs(ePop))
                     return true; // We found the 'until'
 
-                m_pc = pc;                     // Reset program-counter
-                ctxt.reader.skip(ctxt.cursor); // Advance reader
+                m_pc = pc;          // Reset program-counter
+                ctxt.reader.skip(); // Advance reader
             }
-            ctxt.cursor = cursor;
+            ctxt.set_cursor(cursor);
             return false;
         }
         bool machine_t::fnExtract(context_t& ctxt, u32 channel)
         {
-            reader_t::cursor_t start = ctxt.cursor;
+            crunes_t::ptr_t start = ctxt.get_cursor();
             while (!fnOpcodeIs(ePop))
             {
                 if (!fnExec(ctxt))
@@ -585,50 +586,50 @@ namespace xcore
                     return false;
                 }
             };
-            reader_t  view   = ctxt.reader.select(start, ctxt.cursor);
-            writer_t* writer = get_writer(channel);
+            runes_reader_t  view   = ctxt.reader.select(start, ctxt.get_cursor());
+            runes_writer_t* writer = get_writer(channel);
             if (writer != nullptr)
             {
-                writer_t::cursor_t outcursor = writer->get_cursor();
-                writer->write(outcursor, view);
+                writer->write(view.get_current());
             }
             return true;
         }
         bool machine_t::fnEnclosed(context_t& ctxt, uchar32 _open, uchar32 _close)
         {
-            reader_t::cursor_t start = ctxt.cursor;
-            if (ctxt.reader.peek(ctxt.cursor) != _open)
+            crunes_t::ptr_t start = ctxt.get_cursor();
+            if (ctxt.reader.peek() != _open)
                 return false;
-            ctxt.reader.skip(ctxt.cursor);
+            ctxt.reader.skip();
 
             if (!fnExec(ctxt))
             {
-                ctxt.cursor = start;
+                ctxt.set_cursor(start);
                 return false;
             }
-            if (ctxt.reader.peek(ctxt.cursor) != _close)
+            if (ctxt.reader.peek() != _close)
             {
-                ctxt.cursor = start;
-                return false;
+				ctxt.set_cursor(start);
+				return false;
             }
-            ctxt.reader.skip(ctxt.cursor);
+            ctxt.reader.skip();
             return true;
         }
         bool machine_t::fnAny(context_t& ctxt)
         {
-            ctxt.reader.skip(ctxt.cursor);
+            ctxt.reader.skip();
             return true;
         }
-        bool machine_t::fnIn(context_t& ctxt, reader_t const& _chars)
+        bool machine_t::fnIn(context_t& ctxt, runes_reader_t& _chars)
         {
-            reader_t::cursor_t ccursor = _chars.get_cursor();
-            uchar32 const      s       = ctxt.reader.peek(ctxt.cursor);
-            while (_chars.valid(ccursor))
+            _chars.reset();
+            crunes_t::ptr_t ccursor = _chars.get_cursor();
+            uchar32 const   s       = ctxt.reader.peek();
+            while (_chars.valid())
             {
-                uchar32 const c = _chars.read(ccursor);
+                uchar32 const c = _chars.read();
                 if (c == s)
                 {
-                    ctxt.reader.skip(ctxt.cursor);
+                    ctxt.reader.skip();
                     return true;
                 }
             }
@@ -636,10 +637,10 @@ namespace xcore
         }
         bool machine_t::fnBetween(context_t& ctxt, uchar32 _from, uchar32 _until)
         {
-            uchar32 const s = ctxt.reader.peek(ctxt.cursor);
+            uchar32 const s = ctxt.reader.peek();
             if (s >= _from && s <= _until)
             {
-                ctxt.reader.skip(ctxt.cursor);
+                ctxt.reader.skip();
                 return true;
             }
             return false;
@@ -651,7 +652,7 @@ namespace xcore
                 if (!fnBetween(ctxt, 'A', 'Z'))
                     return false;
             }
-            ctxt.reader.skip(ctxt.cursor);
+            ctxt.reader.skip();
             return true;
         }
         bool machine_t::fnDigit(context_t& ctxt)
@@ -660,14 +661,14 @@ namespace xcore
             {
                 return false;
             }
-            ctxt.reader.skip(ctxt.cursor);
+            ctxt.reader.skip();
             return true;
         }
         bool machine_t::fnHex(context_t& ctxt)
         {
             if (fnBetween(ctxt, 'a', 'f') || fnBetween(ctxt, 'A', 'F') || fnBetween(ctxt, '0', '9'))
             {
-                ctxt.reader.skip(ctxt.cursor);
+                ctxt.reader.skip();
                 return true;
             }
             return false;
@@ -676,86 +677,88 @@ namespace xcore
         {
             if (fnDigit(ctxt) || fnAlphabet(ctxt))
             {
-                ctxt.reader.skip(ctxt.cursor);
+                ctxt.reader.skip();
                 return true;
             }
             return false;
         }
-        bool machine_t::fnExact(context_t& ctxt, reader_t const& _text)
+        bool machine_t::fnExact(context_t& ctxt, runes_reader_t& _text)
         {
-            reader_t::cursor_t tcursor = _text.get_cursor();
-            reader_t::cursor_t cursor  = ctxt.cursor;
-            while (_text.valid(tcursor))
+			_text.reset();
+            crunes_t::ptr_t tcursor = _text.get_cursor();
+            crunes_t::ptr_t cursor  = ctxt.get_cursor();
+            while (_text.valid())
             {
-                uchar32 const s = ctxt.reader.peek(cursor);
-                uchar32 const c = _text.read(tcursor);
+                uchar32 const s = ctxt.reader.peek();
+                uchar32 const c = _text.read();
                 if (c != s)
                 {
+					ctxt.set_cursor(cursor);
                     return false;
                 }
             }
-            ctxt.cursor = cursor;
             return true;
         }
-        bool machine_t::fnLike(context_t& ctxt, reader_t const& _text)
+        bool machine_t::fnLike(context_t& ctxt, runes_reader_t& _text)
         {
-            reader_t::cursor_t tcursor = _text.get_cursor();
-            reader_t::cursor_t cursor  = ctxt.cursor;
-            while (_text.valid(tcursor))
+            _text.reset();
+            crunes_t::ptr_t tcursor = _text.get_cursor();
+            crunes_t::ptr_t cursor  = ctxt.get_cursor();
+            while (_text.valid())
             {
-                uchar32 const s = ctxt.reader.peek(cursor);
-                uchar32 const c = _text.read(tcursor);
-                if (c != s && utf32::to_lower(c) != utf32::to_lower(c))
+                uchar32 const s = ctxt.reader.peek();
+                uchar32 const c = _text.read();
+                if (c != s && to_lower(c) != to_lower(c))
                 {
-                    return false;
+					ctxt.set_cursor(cursor);
+					return false;
                 }
             }
-            ctxt.cursor = cursor;
             return true;
         }
         bool machine_t::fnWhiteSpace(context_t& ctxt)
         {
-            uchar32 const s = ctxt.reader.peek(ctxt.cursor);
+            uchar32 const s = ctxt.reader.peek();
             if (s == ' ' || s == '\t' || s == '\r')
             {
-                ctxt.reader.skip(ctxt.cursor);
+                ctxt.reader.skip();
                 return true;
             }
             return false;
         }
         bool machine_t::fnIs(context_t& ctxt, uchar32 _c)
         {
-            uchar32 const s = ctxt.reader.peek(ctxt.cursor);
+            uchar32 const s = ctxt.reader.peek();
             if (s == _c)
             {
-                ctxt.reader.skip(ctxt.cursor);
+                ctxt.reader.skip();
                 return true;
             }
             return false;
         }
         bool machine_t::fnWord(context_t& ctxt)
         {
-            reader_t::cursor_t cursor = ctxt.cursor;
+            crunes_t::ptr_t cursor = ctxt.get_cursor();
             if (!fnAlphabet(ctxt))
             {
-                ctxt.cursor = cursor;
+                ctxt.set_cursor(cursor);
                 return false;
             }
             while (fnAlphabet(ctxt)) {}
             return true;
         }
 
-        bool machine_t::fnEndOfText(context_t& ctxt) { return !ctxt.reader.valid(ctxt.cursor); }
+        bool machine_t::fnEndOfText(context_t& ctxt) { return !ctxt.reader.valid(); }
 
         bool machine_t::fnEndOfLine(context_t& ctxt)
         {
-            reader_t::cursor_t cursor = ctxt.cursor;
-            uchar32 const      s1     = ctxt.reader.peek(ctxt.cursor);
-            ctxt.reader.skip(ctxt.cursor);
-            uchar32 const s2 = ctxt.reader.peek(ctxt.cursor);
+            crunes_t::ptr_t cursor = ctxt.get_cursor();
+            uchar32 const   s1     = ctxt.reader.peek();
+            ctxt.reader.skip();
+            uchar32 const s2 = ctxt.reader.peek();
             if (s1 == '\r' && s2 == '\n')
             {
-                ctxt.reader.skip(ctxt.cursor);
+                ctxt.reader.skip();
                 return true;
             }
             else if (s1 == '\n')
@@ -763,57 +766,57 @@ namespace xcore
                 return true;
             }
 
-            ctxt.cursor = cursor;
+            ctxt.set_cursor(cursor);
             return false;
         }
 
         bool machine_t::fnUnsigned32(context_t& ctxt, u32 _min, u32 _max) { return fnUnsigned64(ctxt, _min, _max); }
         bool machine_t::fnUnsigned64(context_t& ctxt, u64 _min, u64 _max)
         {
-            reader_t::cursor_t cursor = ctxt.cursor;
+            crunes_t::ptr_t cursor = ctxt.get_cursor();
 
             u64 value = 0;
-            while (ctxt.reader.valid(cursor))
+            while (ctxt.reader.valid())
             {
-                uchar32 c = ctxt.reader.peek(cursor);
+                uchar32 c = ctxt.reader.peek();
                 if (!(c >= '0' && c <= '9'))
                     break;
-                value = (value * 10) + utf32::to_digit(c);
-                ctxt.reader.skip(cursor);
+                value = (value * 10) + to_digit(c);
+                ctxt.reader.skip();
             }
 
-            if (cursor == ctxt.cursor)
+            if (cursor == ctxt.get_cursor())
                 return false;
 
             if (value >= _min && value <= _max)
             {
-                ctxt.cursor = cursor;
                 return true;
             }
-            return false;
+			ctxt.set_cursor(cursor);
+			return false;
         }
         bool machine_t::fnInteger32(context_t& ctxt, s32 _min, s32 _max) { return fnInteger64(ctxt, _min, _max); }
         bool machine_t::fnInteger64(context_t& ctxt, s64 _min, s64 _max)
         {
-            reader_t::cursor_t cursor = ctxt.cursor;
+            crunes_t::ptr_t cursor = ctxt.get_cursor();
 
             s64 value = 0;
 
-            uchar32 c = ctxt.reader.peek(cursor);
+            uchar32 c = ctxt.reader.peek();
 
             bool const is_negative = (c == '-');
             if (is_negative)
-                ctxt.reader.skip(cursor);
+                ctxt.reader.skip();
 
-            while (ctxt.reader.valid(cursor))
+            while (ctxt.reader.valid())
             {
-                c = ctxt.reader.peek(cursor);
+                c = ctxt.reader.peek();
                 if (!(c >= '0' && c <= '9'))
                     break;
-                value = (value * 10) + utf32::to_digit(c);
-                ctxt.reader.skip(cursor);
+                value = (value * 10) + to_digit(c);
+                ctxt.reader.skip();
             }
-            if (cursor == ctxt.cursor)
+            if (cursor == ctxt.get_cursor())
                 return false;
 
             if (is_negative)
@@ -821,59 +824,59 @@ namespace xcore
 
             if (value >= _min && value <= _max)
             {
-                ctxt.cursor = cursor;
                 return true;
             }
-            return false;
+			ctxt.set_cursor(cursor);
+			return false;
         }
         bool machine_t::fnFloat32(context_t& ctxt, f32 _min, f32 _max) { return fnFloat64(ctxt, _min, _max); }
         bool machine_t::fnFloat64(context_t& ctxt, f64 _min, f64 _max)
         {
-            reader_t::cursor_t cursor = ctxt.cursor;
+            crunes_t::ptr_t cursor = ctxt.get_cursor();
 
             f64     value       = 0.0;
-            uchar32 c           = ctxt.reader.peek(cursor);
+            uchar32 c           = ctxt.reader.peek();
             bool    is_negative = c == '-';
             if (is_negative)
-                ctxt.reader.skip(cursor);
-            while (ctxt.reader.valid(cursor))
+                ctxt.reader.skip();
+            while (ctxt.reader.valid())
             {
-                c = ctxt.reader.peek(cursor);
-                if (!utf32::is_digit(c))
+                c = ctxt.reader.peek();
+                if (!is_digit(c))
                     break;
-                value = (value * 10.0) + utf32::to_digit(c);
+                value = (value * 10.0) + to_digit(c);
             }
             if (c == '.')
             {
-                ctxt.reader.skip(cursor);
+                ctxt.reader.skip();
                 f64 mantissa = 10.0;
-                while (ctxt.reader.valid(cursor))
+                while (ctxt.reader.valid())
                 {
-                    c = ctxt.reader.peek(cursor);
-                    if (!utf32::is_digit(c))
+                    c = ctxt.reader.peek();
+                    if (!is_digit(c))
                         break;
-                    value = value + f64(utf32::to_digit(c)) / mantissa;
+                    value = value + f64(to_digit(c)) / mantissa;
                     mantissa *= 10.0;
                 }
             }
-            if (cursor == ctxt.cursor)
+            if (cursor == ctxt.get_cursor())
                 return false;
             if (is_negative)
                 value = -value;
             if (value >= _min && value <= _max)
             {
-                ctxt.cursor = cursor;
                 return true;
             }
-            return false;
+			ctxt.set_cursor(cursor);
+			return false;
         }
 
         static void use_case()
         {
-            ascii::runez<128> namestr;
-            writer_t          name(namestr);
-            ascii::runez<128> domainstr;
-            writer_t          domain(domainstr);
+            runez_t<ascii::rune, 128> namestr;
+            runes_writer_t            name(namestr);
+            runez_t<ascii::rune, 128> domainstr;
+            runes_writer_t            domain(domainstr);
 
             // clang-format off
             machine_t m;
@@ -885,9 +888,9 @@ namespace xcore
 
             // clang-format on
 
-            reader_t           reader("john.doe@hotmail.com");
-            reader_t::cursor_t cursor;
-            bool               result = m.execute(reader, cursor);
+            runes_reader_t  reader("john.doe@hotmail.com");
+            crunes_t::ptr_t cursor;
+            bool            result = m.execute(reader, cursor);
             // result == true !
         }
 

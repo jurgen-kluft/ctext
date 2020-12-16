@@ -6,7 +6,6 @@
 #endif
 
 #include "xbase/x_runes.h"
-#include "xtext/x_text.h"
 
 namespace xcore
 {
@@ -16,7 +15,7 @@ namespace xcore
         {
         public:
             /*!
-             * @fn 	bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&)
+             * @fn 	bool Check(runes_reader_t&)
              * Check if the string pointed by cursor is complying to this parsing rule
              * @param[in/out] cursor  A cursor to the parsing string, after successful
              * parsing, the cursor value should move to the last character as far as the
@@ -24,13 +23,16 @@ namespace xcore
              * @return  Return @a true if the parsing succeeds. Otherwise it returns false
              *
              */
-            virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&) = 0;
+            virtual bool Check(runes_reader_t&) = 0;
         };
 
         class tokenizer_1_t : public tokenizer_t
         {
         public:
-            tokenizer_1_t(tokenizer_t& toka) : m_tokenizer_a(toka) {}
+            tokenizer_1_t(tokenizer_t& toka)
+                : m_tokenizer_a(toka)
+            {
+            }
 
         protected:
             tokenizer_t& m_tokenizer_a;
@@ -38,7 +40,11 @@ namespace xcore
         class tokenizer_2_t : public tokenizer_t
         {
         public:
-            tokenizer_2_t(tokenizer_t& toka, tokenizer_t& tokb) : m_tokenizer_a(toka), m_tokenizer_b(tokb) {}
+            tokenizer_2_t(tokenizer_t& toka, tokenizer_t& tokb)
+                : m_tokenizer_a(toka)
+                , m_tokenizer_b(tokb)
+            {
+            }
 
         protected:
             tokenizer_t& m_tokenizer_a;
@@ -80,8 +86,11 @@ namespace xcore
             class Not : public tokenizer_1_t
             {
             public:
-                inline Not(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline Not(tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -112,8 +121,11 @@ namespace xcore
             class Or : public tokenizer_2_t
             {
             public:
-                inline Or(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline Or(tokenizer_t& toka, tokenizer_t& tokb)
+                    : tokenizer_2_t(toka, tokb)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -144,8 +156,11 @@ namespace xcore
             class And : public tokenizer_2_t
             {
             public:
-                And(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                And(tokenizer_t& toka, tokenizer_t& tokb)
+                    : tokenizer_2_t(toka, tokb)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -167,15 +182,23 @@ namespace xcore
             class Sequence : public tokenizer_2_t
             {
             public:
-                inline Sequence(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline Sequence(tokenizer_t& toka, tokenizer_t& tokb)
+                    : tokenizer_2_t(toka, tokb)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
             class Sequence3 : public tokenizer_2_t
             {
                 tokenizer_t& m_tokenizer_c;
+
             public:
-                inline Sequence3(tokenizer_t& toka, tokenizer_t& tokb, tokenizer_t& tokc) : tokenizer_2_t(toka, tokb), m_tokenizer_c(tokc) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline Sequence3(tokenizer_t& toka, tokenizer_t& tokb, tokenizer_t& tokc)
+                    : tokenizer_2_t(toka, tokb)
+                    , m_tokenizer_c(tokc)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -201,10 +224,25 @@ namespace xcore
                 u64 m_min, m_max;
 
             public:
-                Within(u64 min, u64 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_min(min), m_max(max) {}
-                Within(u64 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_min(0), m_max(max) {}
-                Within(tokenizer_t& toka) : tokenizer_1_t(toka), m_min(0), m_max(0xffffffffffffffffUL) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Within(u64 min, u64 max, tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                    , m_min(min)
+                    , m_max(max)
+                {
+                }
+                Within(u64 max, tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                    , m_min(0)
+                    , m_max(max)
+                {
+                }
+                Within(tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                    , m_min(0)
+                    , m_max(0xffffffffffffffffUL)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -230,8 +268,12 @@ namespace xcore
                 s32 m_max;
 
             public:
-                inline Times(s32 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_max(max) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline Times(s32 max, tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                    , m_max(max)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -252,8 +294,11 @@ namespace xcore
             class OneOrMore : public tokenizer_1_t
             {
             public:
-                inline OneOrMore(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline OneOrMore(tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -274,8 +319,11 @@ namespace xcore
             class ZeroOrOne : public tokenizer_1_t
             {
             public:
-                inline ZeroOrOne(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline ZeroOrOne(tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
             typedef ZeroOrOne Optional;
             typedef ZeroOrOne _0Or1;
@@ -299,8 +347,11 @@ namespace xcore
             class While : public tokenizer_1_t
             {
             public:
-                inline While(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline While(tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
             typedef While ZeroOrMore;
 
@@ -321,8 +372,11 @@ namespace xcore
             class Until : public tokenizer_1_t
             {
             public:
-                inline Until(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline Until(tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -332,17 +386,21 @@ namespace xcore
              *
              * @b Example:
              * @code{.cpp}
-             * 		xtext::reader_t selection;
+             * 		runes_reader_t selection;
              * 		Extract(selection, Is('C')) ; // if "C" .. selection = "C"
              * @endcode
              */
             class Extract : public tokenizer_1_t
             {
-                xtext::reader_t& m_selection;
+                runes_reader_t& m_selection;
 
             public:
-                inline Extract(xtext::reader_t& m1, tokenizer_t& toka) : tokenizer_1_t(toka), m_selection(m1) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline Extract(runes_reader_t& m1, tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                    , m_selection(m1)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -361,14 +419,18 @@ namespace xcore
              * 		ReturnToCallback(callback,Is('C')) ; //
              * @endcode
              */
-            typedef void (*CallBack)(xtext::reader_t&, xtext::reader_t::cursor_t&);
+            typedef void (*CallBack)(runes_reader_t&, crunes_t::ptr_t&);
             class ReturnToCallback : public tokenizer_1_t
             {
                 CallBack m_cb;
 
             public:
-                inline ReturnToCallback(CallBack cb, tokenizer_t& toka) : tokenizer_1_t(toka), m_cb(cb) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline ReturnToCallback(CallBack cb, tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                    , m_cb(cb)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -383,12 +445,17 @@ namespace xcore
              */
             class Enclosed : public tokenizer_1_t
             {
-                xtext::reader_t m_open;
-                xtext::reader_t m_close;
+                runes_reader_t m_open;
+                runes_reader_t m_close;
 
             public:
-                inline Enclosed(xtext::reader_t open, xtext::reader_t close, tokenizer_t& toka) : tokenizer_1_t(toka), m_open(open), m_close(close) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                inline Enclosed(runes_reader_t open, runes_reader_t close, tokenizer_t& toka)
+                    : tokenizer_1_t(toka)
+                    , m_open(open)
+                    , m_close(close)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
         } // namespace xmanipulators
@@ -410,7 +477,7 @@ namespace xcore
             {
             public:
                 Any() {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern Any sAny;
 
@@ -427,12 +494,16 @@ namespace xcore
              */
             class In : public tokenizer_t
             {
-                xtext::reader_t m_input;
+                runes_reader_t m_input;
 
             public:
                 In() {}
-                In(xtext::reader_t input) : m_input(input) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+				In(const char* str, u32 len) : m_input(str,str+len) {}
+                In(runes_reader_t input)
+                    : m_input(input)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -454,9 +525,17 @@ namespace xcore
                 uchar32 m_upper;
 
             public:
-                Between() : m_lower('a'), m_upper('z') {}
-                Between(uchar32 lower, uchar32 upper) : m_lower(lower), m_upper(upper) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Between()
+                    : m_lower('a')
+                    , m_upper('z')
+                {
+                }
+                Between(uchar32 lower, uchar32 upper)
+                    : m_lower(lower)
+                    , m_upper(upper)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             // TODO:class SmallLetter;
@@ -481,8 +560,12 @@ namespace xcore
                 Between m_upper_case;
 
             public:
-                Alphabet() : m_lower_case('a', 'z'), m_upper_case('A', 'Z') {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Alphabet()
+                    : m_lower_case('a', 'z')
+                    , m_upper_case('A', 'Z')
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
             extern Alphabet sAlphabet;
 
@@ -501,8 +584,11 @@ namespace xcore
             {
                 Between m_digit; //@TODO; make static
             public:
-                Digit() : m_digit('0', '9') {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Digit()
+                    : m_digit('0', '9')
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
             extern Digit sDigit;
 
@@ -524,8 +610,12 @@ namespace xcore
                 Between m_upper_case;
 
             public:
-                Hex() : m_lower_case('a', 'f'), m_upper_case('A', 'F') {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Hex()
+                    : m_lower_case('a', 'f')
+                    , m_upper_case('A', 'F')
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
             extern Hex sHex;
 
@@ -544,7 +634,7 @@ namespace xcore
             {
             public:
                 AlphaNumeric() {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern AlphaNumeric sAlphaNumeric;
 
@@ -563,12 +653,16 @@ namespace xcore
              */
             class Exact : public tokenizer_t
             {
-                xtext::reader_t m_input;
+                runes_reader_t m_input;
 
             public:
                 Exact() {}
-                Exact(xtext::reader_t input) : m_input(input) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Exact(const char* str, u32 len ) : m_input(str, str + len) {}
+                Exact(runes_reader_t input)
+                    : m_input(input)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -585,16 +679,28 @@ namespace xcore
              */
             class Like : public tokenizer_t
             {
-                xtext::reader_t           m_input;
-                xtext::reader_t::cursor_t m_from;
-                xtext::reader_t::cursor_t m_to;
+                runes_reader_t  m_input;
+                crunes_t::ptr_t m_from;
+                crunes_t::ptr_t m_to;
 
             public:
                 Like() {}
-                Like(xtext::reader_t input) : m_input(input) {}
-                Like(xtext::reader_t input, xtext::reader_t::cursor_t to) : m_input(input), m_to(to) {}
-                Like(xtext::reader_t input, xtext::reader_t::cursor_t from, xtext::reader_t::cursor_t to) : m_input(input), m_from(from), m_to(to) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Like(runes_reader_t input)
+                    : m_input(input)
+                {
+                }
+                Like(runes_reader_t input, crunes_t::ptr_t to)
+                    : m_input(input)
+                    , m_to(to)
+                {
+                }
+                Like(runes_reader_t input, crunes_t::ptr_t from, crunes_t::ptr_t to)
+                    : m_input(input)
+                    , m_from(from)
+                    , m_to(to)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -614,8 +720,10 @@ namespace xcore
                 In m_whitespace;
 
             public:
-                WhiteSpace() : m_whitespace(" \t\n\r") {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                WhiteSpace() : m_whitespace(" \t\n\r", 4)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
             extern WhiteSpace sWhitespace;
 
@@ -634,9 +742,15 @@ namespace xcore
                 uchar32 m_char;
 
             public:
-                Is() : m_char(' ') {}
-                Is(uchar c) : m_char(c) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Is()
+                    : m_char(' ')
+                {
+                }
+                Is(uchar c)
+                    : m_char(c)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -655,7 +769,7 @@ namespace xcore
             {
             public:
                 Decimal() {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern Decimal sDecimal;
 
@@ -675,7 +789,7 @@ namespace xcore
             {
             public:
                 Word() {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern Word sWord;
 
@@ -696,7 +810,7 @@ namespace xcore
             {
             public:
                 EndOfText() {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern EndOfText sEOT;
 
@@ -711,7 +825,7 @@ namespace xcore
             {
             public:
                 EndOfLine() {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern EndOfLine sEOL;
 
@@ -733,10 +847,22 @@ namespace xcore
                 s64 m_max;
 
             public:
-                Integer() : m_min(0), m_max(0x7fffffffffffffffL) {}
-                Integer(s64 max) : m_min(0), m_max(max) {}
-                Integer(s64 min, s64 max) : m_min(min), m_max(max) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Integer()
+                    : m_min(0)
+                    , m_max(0x7fffffffffffffffL)
+                {
+                }
+                Integer(s64 max)
+                    : m_min(0)
+                    , m_max(max)
+                {
+                }
+                Integer(s64 min, s64 max)
+                    : m_min(min)
+                    , m_max(max)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             /*!
@@ -758,10 +884,22 @@ namespace xcore
                 f32 m_max;
 
             public:
-                Float() : m_min(0.0f), m_max(3.402823e+38f) {}
-                Float(f32 max) : m_min(0.0f), m_max(max) {}
-                Float(f32 min, f32 max) : m_min(min), m_max(max) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                Float()
+                    : m_min(0.0f)
+                    , m_max(3.402823e+38f)
+                {
+                }
+                Float(f32 max)
+                    : m_min(0.0f)
+                    , m_max(max)
+                {
+                }
+                Float(f32 min, f32 max)
+                    : m_min(min)
+                    , m_max(max)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
 
             // namespace Date
@@ -783,7 +921,11 @@ namespace xcore
             typedef struct Range
             {
                 s32 m_min, m_max;
-                Range(s32 min, s32 max) : m_min(min), m_max(max) {}
+                Range(s32 min, s32 max)
+                    : m_min(min)
+                    , m_max(max)
+                {
+                }
             } R;
 
             /*!
@@ -803,8 +945,17 @@ namespace xcore
                 xmanipulators::Sequence m_ipv4;
 
             public:
-                IPv4() : m_d3(1, 3, xfilters::sDigit), m_b8(255), m_sub(m_d3, m_b8), m_dot('.'), m_bad(m_sub, m_dot), m_domain(3, m_bad), m_ipv4(m_domain, m_sub) {}
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                IPv4()
+                    : m_d3(1, 3, xfilters::sDigit)
+                    , m_b8(255)
+                    , m_sub(m_d3, m_b8)
+                    , m_dot('.')
+                    , m_bad(m_sub, m_dot)
+                    , m_domain(3, m_bad)
+                    , m_ipv4(m_domain, m_sub)
+                {
+                }
+                virtual bool Check(runes_reader_t&);
             };
             extern IPv4 sIPv4;
 
@@ -817,7 +968,7 @@ namespace xcore
             class Host : public tokenizer_t
             {
             public:
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern Host sHost;
 
@@ -830,7 +981,7 @@ namespace xcore
             class Email : public tokenizer_t
             {
             public:
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern Email sEmail;
 
@@ -843,7 +994,7 @@ namespace xcore
             class Phone : public tokenizer_t
             {
             public:
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern Phone sPhone;
 
@@ -856,7 +1007,7 @@ namespace xcore
             class ServerAddress : public tokenizer_t
             {
             public:
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern ServerAddress sServerAddress;
 
@@ -869,7 +1020,7 @@ namespace xcore
             class Uri : public tokenizer_t
             {
             public:
-                virtual bool Check(xtext::reader_t&, xtext::reader_t::cursor_t&);
+                virtual bool Check(runes_reader_t&);
             };
             extern Uri sURI;
         } // namespace xutils
@@ -878,20 +1029,20 @@ namespace xcore
     class stringprocessor_t
     {
     private:
-        xtext::reader_t           m_string;
-        xtext::reader_t::cursor_t m_cursor;
-        xtext::reader_t::cursor_t m_lastTokenized;
+        runes_reader_t  m_string;
+        crunes_t::ptr_t m_cursor;
+        crunes_t::ptr_t m_lastTokenized;
 
     public:
         stringprocessor_t();
-        stringprocessor_t(xtext::reader_t const& str);
-        stringprocessor_t(xtext::reader_t const& str, xtext::reader_t::cursor_t cursor);
+        stringprocessor_t(runes_reader_t const& str);
+        stringprocessor_t(runes_reader_t const& str, crunes_t::ptr_t cursor);
 
-        bool            parse(xparser::tokenizer_t&);
-        bool            validate(xparser::tokenizer_t&);
-        xtext::reader_t search(xparser::tokenizer_t&);
-        bool            isEOT();
-        void            reset();
+        bool           parse(xparser::tokenizer_t&);
+        bool           validate(xparser::tokenizer_t&);
+        runes_reader_t search(xparser::tokenizer_t&);
+        bool           isEOT();
+        void           reset();
     };
 
 } // namespace xcore
