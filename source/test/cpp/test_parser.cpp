@@ -20,7 +20,7 @@ UNITTEST_SUITE_BEGIN(test_parser)
 
 		UNITTEST_TEST(test_parse_phone_number)
 		{
-			xtext::reader_t reader("+(123)555 443 2 22");
+			runes_reader_t reader("+(123)555 443 2 22");
 			stringprocessor_t processor(reader);
             CHECK_TRUE(processor.parse(xparser::xutils::sPhone));
         }
