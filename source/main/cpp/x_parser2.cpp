@@ -100,8 +100,8 @@ namespace xcore
                 {
                 }
                 xbyte          m_data[1024];
-                xbinary_writer m_writer;
-                xbinary_reader m_reader;
+                binary_writer_t m_writer;
+                binary_reader_t m_reader;
 
                 void reset()
                 {

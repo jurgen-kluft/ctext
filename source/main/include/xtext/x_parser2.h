@@ -6,7 +6,7 @@
 #endif
 
 #include "xbase/x_buffer.h"
-#include "xbase/x_va_list.h"
+#include "xbase/va_list_t.h"
 #include "xbase/x_runes.h"
 
 namespace xcore
@@ -16,10 +16,10 @@ namespace xcore
         // Minimal parser interface / API
         struct parser_t
         {
-            xbuffer m_buffer;
+            buffer_t m_buffer;
 
             bool      Parse(runes_reader_t&);
-            parser_t& Extract(x_va_r const& var);
+            parser_t& Extract(va_r_t const& var);
             parser_t& Pop();
             parser_t& Not();
             parser_t& Or();
