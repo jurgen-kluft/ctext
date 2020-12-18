@@ -871,7 +871,7 @@ namespace xcore
 			return false;
         }
 
-        static void use_case()
+        void use_case_parser2()
         {
             runez_t<ascii::rune, 128> namestr;
             runes_writer_t            name(namestr);

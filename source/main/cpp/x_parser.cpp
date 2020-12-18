@@ -447,22 +447,20 @@ namespace xcore
     stringprocessor_t::stringprocessor_t(runes_reader_t const& str)
     {
         m_string = str;
-        m_cursor = str.get_cursor();
     }
     stringprocessor_t::stringprocessor_t(runes_reader_t const& str, crunes_t::ptr_t cursor)
     {
         m_string = str;
-        m_cursor = cursor;
     }
 
     bool stringprocessor_t::parse(xparser::tokenizer_t& tok)
     {
-        crunes_t::ptr_t start  = m_cursor;
+        crunes_t::ptr_t start  = m_string.get_cursor();
         bool            result = tok.Check(m_string);
         if (result)
         {
-            m_lastTokenized = m_cursor;
-            m_cursor        = start;
+            m_lastTokenized = m_string.get_cursor();
+            m_string.set_cursor(start);
         }
         return result;
     }
@@ -473,19 +471,21 @@ namespace xcore
         return validate.Check(m_string);
     }
 
-    runes_reader_t stringprocessor_t::search(tokenizer_t& tok)
+    crunes_t stringprocessor_t::search(tokenizer_t& tok)
     {
         xmanipulators::Or search(xfilters::sEOT, tok);
         bool              result = xmanipulators::Until(search).Check(m_string);
         if (result && m_string.valid())
         {
-            crunes_t::ptr_t start = m_cursor;
+            crunes_t::ptr_t start = m_string.get_cursor();
             if (tok.Check(m_string))
             {
-                return m_string.select(start, m_cursor);
+                crunes_t::ptr_t end = m_string.get_cursor();
+                crunes_t str = m_string.get_source();
+                return crunes_t(str, start, end);
             }
         }
-        return runes_reader_t();
+        return crunes_t();
     }
 
     bool stringprocessor_t::isEOT() { return (m_string.peek() == ('\0')); }
@@ -493,6 +493,6 @@ namespace xcore
     void stringprocessor_t::reset()
     {
         m_lastTokenized = crunes_t::ptr_t();
-        m_cursor        = m_string.get_cursor();
+        m_string.reset();
     }
 } // namespace xcore

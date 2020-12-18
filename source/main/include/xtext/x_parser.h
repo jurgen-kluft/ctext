@@ -1030,7 +1030,6 @@ namespace xcore
     {
     private:
         runes_reader_t  m_string;
-        crunes_t::ptr_t m_cursor;
         crunes_t::ptr_t m_lastTokenized;
 
     public:
@@ -1040,7 +1039,7 @@ namespace xcore
 
         bool           parse(xparser::tokenizer_t&);
         bool           validate(xparser::tokenizer_t&);
-        runes_reader_t search(xparser::tokenizer_t&);
+        crunes_t       search(xparser::tokenizer_t&);
         bool           isEOT();
         void           reset();
     };

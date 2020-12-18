@@ -5,7 +5,14 @@
 
 using namespace xcore;
 
-extern xcore::alloc_t* gTestAllocator;
+namespace xcore
+{
+	extern alloc_t* gTestAllocator;
+	namespace xparser
+	{
+		extern void use_case_parser2();
+	}
+}
 
 UNITTEST_SUITE_BEGIN(test_parser2)
 {
@@ -20,24 +27,7 @@ UNITTEST_SUITE_BEGIN(test_parser2)
 
 		UNITTEST_TEST(test_parse_1)
 		{
-			runez_t<ascii::rune, 128> namestr;
-			runes_writer_t            name(namestr);
-			runez_t<ascii::rune, 128> domainstr;
-			runes_writer_t            domain(domainstr);
-
-			// clang-format off
-			machine_t m;
-			m.Email();
-
-			// For examples see:
-			// - machine_t::Email()
-			// - machine_t::IPv4()
-
-			// clang-format on
-
-			runes_reader_t  reader("john.doe@hotmail.com");
-			crunes_t::ptr_t cursor;
-			bool            result = m.execute(reader, cursor);
+			xparser::use_case_parser2();
 		}
 
 	}
