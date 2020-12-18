@@ -6,7 +6,7 @@
 #endif
 
 #include "xbase/x_buffer.h"
-#include "xbase/va_list_t.h"
+#include "xbase/x_va_list.h"
 #include "xbase/x_runes.h"
 
 namespace xcore
