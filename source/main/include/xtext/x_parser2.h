@@ -14,9 +14,34 @@ namespace xcore
     namespace xparser
     {
         // Minimal parser interface / API
+        /*
+            e.g.
+
+            xbyte* buffer = alloc->allocate(1024);
+            parser_t p(buffer_t(buffer, 1024));
+
+            s32 value;
+            va_r_t integer(&value);
+
+            p.Sequence();
+                p.Until();
+                    p.Exact("integer");
+                p.Pop();
+                p.Separator('=');
+                p.Extract(integer);
+            p.Pop();
+
+            runes_reader_t text("This is an integer = 512 in text to be parsed");
+            bool valid = p.Parse(text);
+
+            CHECK_EQUAL(true, valid);
+            CHECK_EQUAL(512, value);
+
+            alloc->deallocate(buffer);
+        */
         struct parser_t
         {
-            buffer_t m_buffer;
+            parser_t(buffer_t buffer);
 
             bool      Parse(runes_reader_t&);
             parser_t& Extract(va_r_t const& var);
@@ -40,6 +65,8 @@ namespace xcore
             parser_t& Digit();
             parser_t& Hex();
             parser_t& AlphaNumeric();
+            //parser_t& Exact(const char* _text);
+            parser_t& Separator(uchar32 _c);
             parser_t& Exact(runes_reader_t const& _text);
             parser_t& Like(runes_reader_t const& _text);
             parser_t& WhiteSpace();
@@ -61,9 +88,11 @@ namespace xcore
             parser_t& Phone();
             parser_t& ServerAddress();
             parser_t& URI();
+
+            buffer_t m_buffer;
         };
 
-    }
+    } // namespace xparser
 } // namespace xcore
 
 #endif

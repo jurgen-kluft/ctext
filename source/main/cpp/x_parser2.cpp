@@ -1,6 +1,7 @@
 #include "xbase/x_target.h"
 #include "xbase/x_debug.h"
 #include "xbase/x_buffer.h"
+#include "xbase/x_va_list.h"
 #include "xbase/x_runes.h"
 
 namespace xcore
@@ -13,9 +14,8 @@ namespace xcore
             enum eOpcode
             {
                 eNOP = 0,
-                ePop = 1,
                 // Manipulators (scope)
-                eUsesPop = 0x8000,
+                ePop = 0x8000,
                 eNot,
                 eOr,
                 eAnd,
@@ -62,149 +62,160 @@ namespace xcore
 
             enum eOperandType
             {
-                OPERAND_UCHAR32,
-                OPERAND_U32,
-                OPERAND_S32,
-                OPERAND_U64,
-                OPERAND_S64,
-                OPERAND_F32,
-                OPERAND_F64,
-                OPERAND_READER,
+                OPERAND_UCHAR32         = 0,
+                OPERAND_UCHAR32_UCHAR32 = 1,
+                OPERAND_U32             = 2,
+                OPERAND_U32_u32         = 3,
+                OPERAND_S32             = 4,
+                OPERAND_S32_S32         = 5,
+                OPERAND_U64             = 6,
+                OPERAND_U64_u64         = 7,
+                OPERAND_S64             = 8,
+                OPERAND_S64_s64         = 9,
+                OPERAND_F32             = 10,
+                OPERAND_F32_F32         = 11,
+                OPERAND_F64             = 12,
+                OPERAND_F64_F64         = 13, // min / max
+                OPERAND_S32_PTR         = 14, // va_r_t
+                OPERAND_S32_PTR_PTR     = 15, // runes_reader_t
+                OPERAND_READER          = 16,
             };
 
         private:
-            struct instr_t
-            {
-                instr_t()
-                    : m_opcode(eNOP)
-                    , m_operand(0xffff)
-                    , m_pop_loc(0xffff)
-                {
-                }
-                instr_t(eOpcode o)
-                    : m_opcode(o)
-                    , m_operand(0xffff)
-                    , m_pop_loc(0xffff)
-                {
-                }
-                u16 m_opcode;
-                u16 m_operand;
-                u16 m_pop_loc;
-            };
-
             struct operands_t
             {
-                operands_t()
-                    : m_writer(m_data, 1024)
-                    , m_reader(m_data, 1024)
+                static u16 write(binary_writer_t& writer, u16 opa) { return (u16)writer.write(opa); }
+                static u16 write(binary_writer_t& writer, u32 opa) { return (u16)writer.write(opa); }
+                static u16 write(binary_writer_t& writer, u32 opa, u32 opb)
                 {
-                }
-                xbyte          m_data[1024];
-                binary_writer_t m_writer;
-                binary_reader_t m_reader;
-
-                void reset()
-                {
-                    m_writer.reset();
-                    m_reader.reset();
-                }
-
-                u16 write(u32 opa) { return (u16)m_writer.write(opa); }
-                u16 write(u32 opa, u32 opb)
-                {
-                    u16 const offset = (u16)m_writer.write(opa);
-                    m_writer.write(opb);
+                    u16 const offset = (u16)writer.write(opa);
+                    writer.write(opb);
                     return offset;
                 }
-                u16 write(s32 opa) { return (u16)m_writer.write(opa); }
-                u16 write(s32 opa, s32 opb)
+                static u16 write(binary_writer_t& writer, s32 opa) { return (u16)writer.write(opa); }
+                static u16 write(binary_writer_t& writer, s32 opa, s32 opb)
                 {
-                    u16 const offset = (u16)m_writer.write(opa);
-                    m_writer.write(opb);
+                    u16 const offset = (u16)writer.write(opa);
+                    writer.write(opb);
                     return offset;
                 }
-                u16 write(s64 opa, s64 opb)
+                static u16 write(binary_writer_t& writer, s64 opa, s64 opb)
                 {
-                    u16 const offset = (u16)m_writer.write(opa);
-                    m_writer.write(opb);
+                    u16 const offset = (u16)writer.write(opa);
+                    writer.write(opb);
                     return offset;
                 }
-                u16 write(u64 opa, u64 opb)
+                static u16 write(binary_writer_t& writer, u64 opa)
                 {
-                    u16 const offset = (u16)m_writer.write(opa);
-                    m_writer.write(opb);
+                    u16 const offset = (u16)writer.write(opa);
                     return offset;
                 }
-                u16 write(f32 opa, f32 opb)
+                static u16 write(binary_writer_t& writer, u64 opa, u64 opb)
                 {
-                    u16 const offset = (u16)m_writer.write(opa);
-                    m_writer.write(opb);
+                    u16 const offset = (u16)writer.write(opa);
+                    writer.write(opb);
                     return offset;
                 }
-                u16 write(f64 opa, f64 opb)
+                static u16 write(binary_writer_t& writer, f32 opa, f32 opb)
                 {
-                    u16 const offset = (u16)m_writer.write(opa);
-                    m_writer.write(opb);
+                    u16 const offset = (u16)writer.write(opa);
+                    writer.write(opb);
                     return offset;
                 }
-                u16 write(runes_reader_t const&) { return 0; }
-                s32 read_s32(instr_t& instr, s32 i)
+                static u16 write(binary_writer_t& writer, f64 opa, f64 opb)
+                {
+                    u16 const offset = (u16)writer.write(opa);
+                    writer.write(opb);
+                    return offset;
+                }
+                static u16 write(binary_writer_t& writer, va_r_t var)
+                {
+                    u16 const offset = (u16)writer.write(var.mType);
+                    writer.write(var.mRef[0]);
+                    return offset;
+                }
+                static u16 write(binary_writer_t& writer, runes_reader_t const& reader)
+                {
+                    crunes_t  r      = reader.get_current();
+                    u16 const offset = writer.write((u16)r.m_type);
+                    writer.write((uptr)r.m_runes.m_ascii.m_str);
+                    writer.write((uptr)r.m_runes.m_ascii.m_end);
+                    return offset;
+                }
+                static s32 read_s32(binary_reader_t& reader)
                 {
                     s32 value;
-                    m_reader.read(value);
+                    reader.read(value);
                     return value;
                 }
-                s64 read_s64(instr_t& instr, s32 i)
+                static s64 read_s64(binary_reader_t& reader)
                 {
                     s64 value;
-                    m_reader.read(value);
+                    reader.read(value);
                     return value;
                 }
-                u32 read_u32(instr_t& instr, s32 i)
+                static u32 read_u32(binary_reader_t& reader)
                 {
                     u32 value;
-                    m_reader.read(value);
+                    reader.read(value);
                     return value;
                 }
-                uchar32 read_uchar32(instr_t& instr, s32 i) { return (uchar32)read_u32(instr, i); }
-                u64     read_u64(instr_t& instr, s32 i)
+                static uchar32 read_uchar32(binary_reader_t& reader)
+                {
+                    u32 value;
+                    reader.read(value);
+                    return (uchar32)value;
+                }
+                static u64 read_u64(binary_reader_t& reader)
                 {
                     u64 value;
-                    m_reader.read(value);
+                    reader.read(value);
                     return value;
                 }
-                f32 read_f32(instr_t& instr, s32 i)
+                static f32 read_f32(binary_reader_t& reader)
                 {
                     f32 value;
-                    m_reader.read(value);
+                    reader.read(value);
                     return value;
                 }
-                f64 read_f64(instr_t& instr, s32 i)
+                static f64 read_f64(binary_reader_t& reader)
                 {
                     f64 value;
-                    m_reader.read(value);
+                    reader.read(value);
                     return value;
                 }
-                runes_reader_t read_reader(instr_t& instr, s32 i) { return runes_reader_t(); }
+                static va_r_t read_var(binary_reader_t& reader)
+                {
+                    va_r_t var;
+                    var.mType   = reader.read_u16();
+                    var.mVar    = 0;
+                    var.mRef[0] = reader.read_u64();
+                    return var;
+                }
+                static runes_reader_t read_reader(binary_reader_t& reader)
+                {
+                    crunes_t str;
+                    str.m_type                = (s32)reader.read_u16();
+                    str.m_runes.m_ascii.m_bos = (ascii::pcrune)reader.read_u64();
+                    str.m_runes.m_ascii.m_str = str.m_runes.m_ascii.m_bos;
+                    str.m_runes.m_ascii.m_eos = (ascii::pcrune)reader.read_u64();
+                    str.m_runes.m_ascii.m_end = str.m_runes.m_ascii.m_eos;
+                    return runes_reader_t(str);
+                }
             };
 
             runes_writer_t* get_writer(u32 channel) { return nullptr; }
 
-            s32        m_pc;
-            s32        m_code_size;
-            s32        m_code_max;
-            instr_t    m_code[512];
-            operands_t m_operands;
-            u16        m_stack[256];
-            s32        m_stack_size;
-            s32        m_stack_max;
+            s32             m_pc;
+            binary_writer_t m_code;
+            binary_reader_t m_program;
+            u16*            m_stack;
+            s32             m_stack_size;
+            s32             m_stack_max;
 
             struct context_t
             {
-                context_t(runes_reader_t const& _reader)
-                    : reader(_reader)
-                {
-                }
+                context_t(runes_reader_t const& _reader) : reader(_reader) {}
 
                 crunes_t::ptr_t get_cursor() const { return reader.get_cursor(); }
                 void            set_cursor(crunes_t::ptr_t const& c) { reader.set_cursor(c); }
@@ -212,51 +223,78 @@ namespace xcore
                 runes_reader_t reader;
             };
 
-            void handle_pop(eOpcode o)
+            void emit_pop_handle(eOpcode o)
             {
-                if ((o & eUsesPop) == eUsesPop)
+                if (o == ePop)
                 {
-                    m_stack[m_stack_size] = m_code_size;
-                    m_stack_size++;
+                    u16 const       pc           = m_stack[--m_stack_size];
+                    binary_writer_t write_poploc = m_code.range(pc, pc + sizeof(u16));
+                    write_poploc.write((u16)m_code.pos());
                 }
-                else if (o == ePop)
+                else if ((o & ePop) == ePop)
                 {
-                    m_stack_size -= 1;
-                    u16 pc               = m_stack[m_stack_size];
-                    m_code[pc].m_pop_loc = m_code_size;
+                    m_stack[m_stack_size++] = m_code.pos() + 2;
                 }
             }
             machine_t& emit_instr(eOpcode o)
             {
-                handle_pop(o);
-                ASSERT(m_code_size < m_code_max);
-                m_code[m_code_size++] = instr_t(o);
+                emit_pop_handle(o);
+                m_code.write((u16)o);
+                if ((o & ePop) == ePop)
+                    m_code.write((u16)0);
                 return *this;
             }
             template <typename T> machine_t& emit_instr(eOpcode o, T _a)
             {
-                handle_pop(o);
-                ASSERT(m_code_size < m_code_max);
-                instr_t instr(o);
-                instr.m_operand       = m_operands.write(_a);
-                m_code[m_code_size++] = instr;
+                emit_instr(o);
+                operands_t::write(m_code, _a);
                 return *this;
             }
             template <typename T1, typename T2> machine_t& emit_instr(eOpcode o, T1 _a, T2 _b)
             {
-                handle_pop(o);
-                ASSERT(m_code_size < m_code_max);
-                instr_t instr(o);
-                instr.m_operand       = m_operands.write(_a, _b);
-                m_code[m_code_size++] = instr;
+                emit_pop_handle(o);
+                emit_instr(o);
+                operands_t::write(m_code, _a, _b);
+                return *this;
+            }
+            machine_t& emit_instr(eOpcode o, runes_reader_t const& reader)
+            {
+                emit_pop_handle(o);
+                emit_instr(o);
+                crunes_t current = reader.get_current();
+                operands_t::write(m_code, (u16)current.m_type);
+                operands_t::write(m_code, (u64)current.m_runes.m_ascii.m_str, (u64)current.m_runes.m_ascii.m_end);
+                return *this;
+            }
+            machine_t& emit_instr(eOpcode o, va_r_t var)
+            {
+                emit_pop_handle(o);
+                emit_instr(o);
+                operands_t::write(m_code, (u16)var.mType);
+                operands_t::write(m_code, (u64)var.mRef[0]);
                 return *this;
             }
 
         public:
+            machine_t() : m_code(), m_program(), m_stack(nullptr), m_stack_size(0), m_stack_max(0) {}
+            void initialize(buffer_t buffer)
+            {
+                // Give some memory to code-block and stack
+                u32 const buffersize   = buffer.size();
+                buffer_t  code_buffer  = buffer(0, (buffersize * 8) / 10);          // 80 %
+                buffer_t  stack_buffer = buffer(code_buffer.size(), buffer.size()); // 20 %
+                m_code                 = code_buffer;
+                m_stack                = (u16*)stack_buffer.data();
+                m_stack_max            = stack_buffer.size() / sizeof(u16);
+                m_stack_size           = 0;
+            }
+
             bool execute(runes_reader_t const& reader, crunes_t::ptr_t& cursor)
             {
                 context_t ctxt(reader);
                 ctxt.reader.set_cursor(cursor);
+                buffer_t code = m_code.get_current_buffer();
+                m_program     = binary_reader_t(code);
                 return fnExec(ctxt);
             }
 
@@ -272,7 +310,7 @@ namespace xcore
             machine_t& ZeroOrOne() { return emit_instr(eZeroOrOne); }
             machine_t& While() { return emit_instr(eWhile); }
             machine_t& Until() { return emit_instr(eUntil); }
-            machine_t& Extract(u32 channel) { return emit_instr(eTimes, (u32)channel); }
+            machine_t& Extract(va_r_t var) { return emit_instr(eExtract, var); }
             machine_t& Enclosed(uchar32 _open, uchar32 _close) { return emit_instr(eEnclosed, (u32)_open, (u32)_close); }
             machine_t& Any() { return emit_instr(eAny); }
             machine_t& In(runes_reader_t const& _chars) { return emit_instr(eIn, _chars); }
@@ -294,7 +332,7 @@ namespace xcore
             machine_t& Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL) { return emit_instr(eInteger64, _min, _max); }
             machine_t& Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f) { return emit_instr(eFloat32, _min, _max); }
             machine_t& Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f) { return emit_instr(eFloat64, _min, _max); }
-            machine_t& Email();
+            machine_t& Email(va_r_t email_name, va_r_t email_domain);
             machine_t& IPv4();
             machine_t& Host();
             machine_t& Date() { return *this; }
@@ -303,8 +341,8 @@ namespace xcore
             machine_t& ServerAddress() { return *this; }
             machine_t& URI() { return *this; }
 
+            bool fnOpcodeIs(eOpcode) const;
             bool fnExec(context_t& ctxt);
-            bool fnOpcodeIs(eOpcode o) const;
             bool fnNot(context_t& ctxt);
             bool fnOr(context_t& ctxt);
             bool fnAnd(context_t& ctxt);
@@ -316,17 +354,17 @@ namespace xcore
             bool fnZeroOrOne(context_t& ctxt);
             bool fnWhile(context_t& ctxt);
             bool fnUntil(context_t& ctxt);
-            bool fnExtract(context_t& ctxt, u32 channel);
+            bool fnExtract(context_t& ctxt, va_r_t var);
             bool fnEnclosed(context_t& ctxt, uchar32 _open, uchar32 _close);
             bool fnAny(context_t& ctxt);
-            bool fnIn(context_t& ctxt, runes_reader_t& _chars);
+            bool fnIn(context_t& ctxt, runes_reader_t _chars);
             bool fnBetween(context_t& ctxt, uchar32 _from, uchar32 _until);
             bool fnAlphabet(context_t& ctxt);
             bool fnDigit(context_t& ctxt);
             bool fnHex(context_t& ctxt);
             bool fnAlphaNumeric(context_t& ctxt);
-            bool fnExact(context_t& ctxt, runes_reader_t& _text); // Case-Sensitive
-            bool fnLike(context_t& ctxt, runes_reader_t& _text);  // Case-Insensitive
+            bool fnExact(context_t& ctxt, runes_reader_t _text); // Case-Sensitive
+            bool fnLike(context_t& ctxt, runes_reader_t _text);  // Case-Insensitive
             bool fnWhiteSpace(context_t& ctxt);
             bool fnIs(context_t& ctxt, uchar32 _c);
             bool fnWord(context_t& ctxt);
@@ -338,14 +376,16 @@ namespace xcore
             bool fnInteger64(context_t& ctxt, s64 _min, s64 _max);
             bool fnFloat32(context_t& ctxt, f32 _min, f32 _max);
             bool fnFloat64(context_t& ctxt, f64 _min, f64 _max);
+
+            XCORE_CLASS_PLACEMENT_NEW_DELETE
         };
 
-        machine_t& machine_t::Email()
+        machine_t& machine_t::Email(va_r_t email_name, va_r_t email_domain)
         {
             runes_reader_t validchars((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 19);
             // clang-format off
             Sequence();
-                Extract(0);        // e.g. john.doe
+                Extract(email_name);        // e.g. john.doe
                     OneOrMore();
                         Or();
                             AlphaNumeric();
@@ -364,7 +404,7 @@ namespace xcore
                     Pop();
                 Pop();
                 Is('@');
-                Extract(1);        // e.g. hotmail.com
+                Extract(email_domain);        // e.g. hotmail.com
                     Host();
                 Pop();
             Pop();
@@ -431,54 +471,56 @@ namespace xcore
 
         bool machine_t::fnExec(context_t& ctxt)
         {
-            instr_t instr = m_code[m_pc++];
-
             //@NOTE: When a fn that requires a Pop returns false we need to jump over any existing opcodes to arrive
             //       at the Pop opcode.
 
             bool    result;
-            eOpcode o = (eOpcode)instr.m_opcode;
+            eOpcode o = (eOpcode)m_program.read_u16();
             switch (o)
             {
                 case eOr: result = fnOr(ctxt); break;
                 case eNot: result = fnNot(ctxt); break;
                 case eAnd: result = fnAnd(ctxt); break;
                 case eSequence: result = fnSequence(ctxt); break;
-                case eWithin: result = fnWithin(ctxt, m_operands.read_s32(instr, 0), m_operands.read_s32(instr, 1)); break;
-                case eTimes: result = fnTimes(ctxt, m_operands.read_s32(instr, 0)); break;
+                case eWithin: result = fnWithin(ctxt, operands_t::read_s32(m_program), operands_t::read_s32(m_program)); break;
+                case eTimes: result = fnTimes(ctxt, operands_t::read_s32(m_program)); break;
                 case eOneOrMore: result = fnOneOrMore(ctxt); break;
                 case eZeroOrMore: result = fnZeroOrMore(ctxt); break;
                 case eZeroOrOne: result = fnZeroOrOne(ctxt); break;
                 case eWhile: result = fnWhile(ctxt); break;
                 case eUntil: result = fnUntil(ctxt); break;
-                case eExtract: result = fnExtract(ctxt, m_operands.read_u32(instr, 0)); break;
-                case eEnclosed: result = fnEnclosed(ctxt, m_operands.read_uchar32(instr, 0), m_operands.read_uchar32(instr, 1)); break;
+                case eExtract: result = fnExtract(ctxt, operands_t::read_var(m_program)); break;
+                case eEnclosed: result = fnEnclosed(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program)); break;
                 case eAny: result = fnAny(ctxt); break;
-                case eIn: result = fnIn(ctxt, m_operands.read_reader(instr, 0)); break;
-                case eBetween: result = fnBetween(ctxt, m_operands.read_uchar32(instr, 0), m_operands.read_uchar32(instr, 1)); break;
+                case eIn: result = fnIn(ctxt, operands_t::read_reader(m_program)); break;
+                case eBetween: result = fnBetween(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program)); break;
                 case eAlphabet: result = fnAlphabet(ctxt); break;
                 case eDigit: result = fnDigit(ctxt); break;
                 case eHex: result = fnHex(ctxt); break;
                 case eAlphaNumeric: result = fnAlphaNumeric(ctxt); break;
-                case eExact: result = fnExact(ctxt, m_operands.read_reader(instr, 0)); break;
-                case eLike: result = fnLike(ctxt, m_operands.read_reader(instr, 0)); break;
+                case eExact: result = fnExact(ctxt, operands_t::read_reader(m_program)); break;
+                case eLike: result = fnLike(ctxt, operands_t::read_reader(m_program)); break;
                 case eWhiteSpace: result = fnWhiteSpace(ctxt); break;
-                case eIs: result = fnIs(ctxt, m_operands.read_uchar32(instr, 0)); break;
+                case eIs: result = fnIs(ctxt, operands_t::read_uchar32(m_program)); break;
                 case eWord: result = fnWord(ctxt); break;
                 case eEndOfText: result = fnEndOfText(ctxt); break;
                 case eEndOfLine: result = fnEndOfLine(ctxt); break;
-                case eUnsigned32: result = fnUnsigned32(ctxt, m_operands.read_u32(instr, 0), m_operands.read_u32(instr, 1)); break;
-                case eUnsigned64: result = fnUnsigned64(ctxt, m_operands.read_u64(instr, 0), m_operands.read_u64(instr, 1)); break;
-                case eInteger32: result = fnInteger32(ctxt, m_operands.read_s32(instr, 0), m_operands.read_s32(instr, 1)); break;
-                case eInteger64: result = fnInteger64(ctxt, m_operands.read_s64(instr, 0), m_operands.read_s64(instr, 1)); break;
-                case eFloat32: result = fnFloat32(ctxt, m_operands.read_f32(instr, 0), m_operands.read_f32(instr, 1)); break;
-                case eFloat64: result = fnFloat64(ctxt, m_operands.read_f64(instr, 0), m_operands.read_f64(instr, 1)); break;
+                case eUnsigned32: result = fnUnsigned32(ctxt, operands_t::read_u32(m_program), operands_t::read_u32(m_program)); break;
+                case eUnsigned64: result = fnUnsigned64(ctxt, operands_t::read_u64(m_program), operands_t::read_u64(m_program)); break;
+                case eInteger32: result = fnInteger32(ctxt, operands_t::read_s32(m_program), operands_t::read_s32(m_program)); break;
+                case eInteger64: result = fnInteger64(ctxt, operands_t::read_s64(m_program), operands_t::read_s64(m_program)); break;
+                case eFloat32: result = fnFloat32(ctxt, operands_t::read_f32(m_program), operands_t::read_f32(m_program)); break;
+                case eFloat64: result = fnFloat64(ctxt, operands_t::read_f64(m_program), operands_t::read_f64(m_program)); break;
                 default: result = false;
             }
             return result;
         }
 
-        bool machine_t::fnOpcodeIs(eOpcode o) const { return m_code[m_pc].m_opcode == (u8)o; }
+        bool machine_t::fnOpcodeIs(eOpcode o) const
+        {
+            u16 const opcode = m_program.peek_u16();
+            return opcode == o;
+        }
 
         bool machine_t::fnNot(context_t& ctxt) { return !(fnExec(ctxt)); }
 
@@ -576,7 +618,7 @@ namespace xcore
             ctxt.set_cursor(cursor);
             return false;
         }
-        bool machine_t::fnExtract(context_t& ctxt, u32 channel)
+        bool machine_t::fnExtract(context_t& ctxt, va_r_t var)
         {
             crunes_t::ptr_t start = ctxt.get_cursor();
             while (!fnOpcodeIs(ePop))
@@ -586,11 +628,11 @@ namespace xcore
                     return false;
                 }
             };
-            runes_reader_t  view   = ctxt.reader.select(start, ctxt.get_cursor());
-            runes_writer_t* writer = get_writer(channel);
-            if (writer != nullptr)
+            runes_reader_t varreader = ctxt.reader.select(start, ctxt.get_cursor());
+            crunes_t       varrunes  = varreader.get_current();
+            if (!varrunes.is_empty())
             {
-                writer->write(view.get_current());
+                var = varrunes;
             }
             return true;
         }
@@ -608,8 +650,8 @@ namespace xcore
             }
             if (ctxt.reader.peek() != _close)
             {
-				ctxt.set_cursor(start);
-				return false;
+                ctxt.set_cursor(start);
+                return false;
             }
             ctxt.reader.skip();
             return true;
@@ -619,7 +661,7 @@ namespace xcore
             ctxt.reader.skip();
             return true;
         }
-        bool machine_t::fnIn(context_t& ctxt, runes_reader_t& _chars)
+        bool machine_t::fnIn(context_t& ctxt, runes_reader_t _chars)
         {
             _chars.reset();
             crunes_t::ptr_t ccursor = _chars.get_cursor();
@@ -682,9 +724,9 @@ namespace xcore
             }
             return false;
         }
-        bool machine_t::fnExact(context_t& ctxt, runes_reader_t& _text)
+        bool machine_t::fnExact(context_t& ctxt, runes_reader_t _text)
         {
-			_text.reset();
+            _text.reset();
             crunes_t::ptr_t tcursor = _text.get_cursor();
             crunes_t::ptr_t cursor  = ctxt.get_cursor();
             while (_text.valid())
@@ -693,13 +735,13 @@ namespace xcore
                 uchar32 const c = _text.read();
                 if (c != s)
                 {
-					ctxt.set_cursor(cursor);
+                    ctxt.set_cursor(cursor);
                     return false;
                 }
             }
             return true;
         }
-        bool machine_t::fnLike(context_t& ctxt, runes_reader_t& _text)
+        bool machine_t::fnLike(context_t& ctxt, runes_reader_t _text)
         {
             _text.reset();
             crunes_t::ptr_t tcursor = _text.get_cursor();
@@ -710,8 +752,8 @@ namespace xcore
                 uchar32 const c = _text.read();
                 if (c != s && to_lower(c) != to_lower(c))
                 {
-					ctxt.set_cursor(cursor);
-					return false;
+                    ctxt.set_cursor(cursor);
+                    return false;
                 }
             }
             return true;
@@ -792,8 +834,8 @@ namespace xcore
             {
                 return true;
             }
-			ctxt.set_cursor(cursor);
-			return false;
+            ctxt.set_cursor(cursor);
+            return false;
         }
         bool machine_t::fnInteger32(context_t& ctxt, s32 _min, s32 _max) { return fnInteger64(ctxt, _min, _max); }
         bool machine_t::fnInteger64(context_t& ctxt, s64 _min, s64 _max)
@@ -826,8 +868,8 @@ namespace xcore
             {
                 return true;
             }
-			ctxt.set_cursor(cursor);
-			return false;
+            ctxt.set_cursor(cursor);
+            return false;
         }
         bool machine_t::fnFloat32(context_t& ctxt, f32 _min, f32 _max) { return fnFloat64(ctxt, _min, _max); }
         bool machine_t::fnFloat64(context_t& ctxt, f64 _min, f64 _max)
@@ -867,8 +909,8 @@ namespace xcore
             {
                 return true;
             }
-			ctxt.set_cursor(cursor);
-			return false;
+            ctxt.set_cursor(cursor);
+            return false;
         }
 
         void use_case_parser2()
@@ -880,7 +922,10 @@ namespace xcore
 
             // clang-format off
             machine_t m;
-			m.Email();
+
+            runez_t<ascii::rune, 64> email_name;
+            runez_t<ascii::rune, 64> email_domain;
+			m.Email(va_r_t(&email_name), va_r_t(&email_domain));
 
             // For examples see:
             // - machine_t::Email()
@@ -893,6 +938,323 @@ namespace xcore
             bool            result = m.execute(reader, cursor);
             // result == true !
         }
+
+        struct parser_ctxt_t
+        {
+        };
+
+        struct parser_t
+        {
+            parser_t(buffer_t buffer)
+            {
+                buffer_t   machine_buffer = buffer(0, sizeof(machine_t));
+                buffer_t   work_buffer    = buffer(sizeof(machine_t), buffer.size());
+                void*      machine_mem    = machine_buffer.data();
+                machine_t* machine        = new (machine_mem) machine_t();
+                machine->initialize(work_buffer);
+            }
+
+            bool Parse(runes_reader_t& reader)
+            {
+                machine_t*      machine = (machine_t*)m_buffer.data();
+                crunes_t::ptr_t cursor  = reader.get_cursor();
+                return machine->execute(reader, cursor);
+            }
+
+            parser_t& Extract(va_r_t const& var)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Extract(var);
+                return *this;
+            }
+            parser_t& Pop()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Pop();
+                return *this;
+            }
+            parser_t& Not()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Not();
+                return *this;
+            }
+
+            parser_t& Or()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Or();
+                return *this;
+            }
+
+            parser_t& And()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->And();
+                return *this;
+            }
+
+            parser_t& Sequence()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Sequence();
+                return *this;
+            }
+
+            parser_t& Within(s32 _min = 0, s32 _max = 0x7fffffff)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Within(_min, _max);
+                return *this;
+            }
+
+            parser_t& Times(s32 _count)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Times(_count);
+                return *this;
+            }
+
+            parser_t& OneOrMore()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->OneOrMore();
+                return *this;
+            }
+
+            parser_t& ZeroOrMore()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->ZeroOrMore();
+                return *this;
+            }
+
+            parser_t& ZeroOrOne()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->ZeroOrOne();
+                return *this;
+            }
+
+            parser_t& While()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->While();
+                return *this;
+            }
+
+            parser_t& Until()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Until();
+                return *this;
+            }
+
+            parser_t& Enclosed(uchar32 _open, uchar32 _close)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Enclosed(_open, _close);
+                return *this;
+            }
+
+            parser_t& Any()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Any();
+                return *this;
+            }
+
+            parser_t& In(runes_reader_t const& _chars)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->In(_chars);
+                return *this;
+            }
+
+            parser_t& Between(uchar32 _from, uchar32 _until)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Between(_from, _until);
+                return *this;
+            }
+
+            parser_t& Alphabet()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Alphabet();
+                return *this;
+            }
+
+            parser_t& Digit()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Digit();
+                return *this;
+            }
+
+            parser_t& Hex()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Hex();
+                return *this;
+            }
+
+            parser_t& AlphaNumeric()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->AlphaNumeric();
+                return *this;
+            }
+
+            parser_t& Exact(runes_reader_t const& _text)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Exact(_text);
+                return *this;
+            }
+
+            parser_t& Like(runes_reader_t const& _text)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Like(_text);
+                return *this;
+            }
+
+            parser_t& WhiteSpace()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->WhiteSpace();
+                return *this;
+            }
+
+            parser_t& Is(uchar32 _c)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Is(_c);
+                return *this;
+            }
+
+            parser_t& Word()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Word();
+                return *this;
+            }
+
+            parser_t& EndOfText()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->EndOfText();
+                return *this;
+            }
+
+            parser_t& EndOfLine()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->EndOfLine();
+                return *this;
+            }
+
+            parser_t& Unsigned32(u32 _min, u32 _max)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Unsigned32(_min, _max);
+                return *this;
+            }
+
+            parser_t& Unsigned64(u64 _min, u64 _max)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Unsigned64(_min, _max);
+                return *this;
+            }
+
+            parser_t& Integer32(s32 _min, s32 _max)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Integer32(_min, _max);
+                return *this;
+            }
+
+            parser_t& Integer64(s64 _min, s64 _max)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Integer64(_min, _max);
+                return *this;
+            }
+
+            parser_t& Float32(f32 _min, f32 _max)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Float32(_min, _max);
+                return *this;
+            }
+
+            parser_t& Float64(f64 _min, f64 _max)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Float64(_min, _max);
+                return *this;
+            }
+
+            parser_t& Email(va_r_t email_name, va_r_t email_domain)
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Email(email_name, email_domain);
+                return *this;
+            }
+
+            parser_t& IPv4()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->IPv4();
+                return *this;
+            }
+
+            parser_t& Host()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Host();
+                return *this;
+            }
+
+            parser_t& Date()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Date();
+                return *this;
+            }
+
+            parser_t& Time()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Time();
+                return *this;
+            }
+
+            parser_t& Phone()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->Phone();
+                return *this;
+            }
+
+            parser_t& ServerAddress()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->ServerAddress();
+                return *this;
+            }
+
+            parser_t& URI()
+            {
+                machine_t* machine = (machine_t*)m_buffer.data();
+                machine->URI();
+                return *this;
+            }
+
+            buffer_t m_buffer;
+        };
 
     } // namespace xparser
 
