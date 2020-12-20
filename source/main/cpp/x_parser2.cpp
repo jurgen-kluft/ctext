@@ -1,5 +1,5 @@
-#include "xbase/x_target.h"
 #include "xbase/x_debug.h"
+#include "xbase/x_target.h"
 #include "xbase/x_buffer.h"
 #include "xbase/x_va_list.h"
 #include "xbase/x_runes.h"
@@ -88,103 +88,77 @@ namespace xcore
                 static u16 write(binary_writer_t& writer, u32 opa) { return (u16)writer.write(opa); }
                 static u16 write(binary_writer_t& writer, u32 opa, u32 opb)
                 {
-                    u16 const offset = (u16)writer.write(opa);
+                    u16 const offset = (u16)writer.pos();
+                    writer.write(opa);
                     writer.write(opb);
                     return offset;
                 }
                 static u16 write(binary_writer_t& writer, s32 opa) { return (u16)writer.write(opa); }
                 static u16 write(binary_writer_t& writer, s32 opa, s32 opb)
                 {
-                    u16 const offset = (u16)writer.write(opa);
+                    u16 const offset = (u16)writer.pos();
+                    writer.write(opa);
                     writer.write(opb);
                     return offset;
                 }
                 static u16 write(binary_writer_t& writer, s64 opa, s64 opb)
                 {
-                    u16 const offset = (u16)writer.write(opa);
+                    u16 const offset = (u16)writer.pos();
+                    writer.write(opa);
                     writer.write(opb);
                     return offset;
                 }
                 static u16 write(binary_writer_t& writer, u64 opa)
                 {
-                    u16 const offset = (u16)writer.write(opa);
+                    u16 const offset = (u16)writer.pos();
+                    writer.write(opa);
                     return offset;
                 }
                 static u16 write(binary_writer_t& writer, u64 opa, u64 opb)
                 {
-                    u16 const offset = (u16)writer.write(opa);
+                    u16 const offset = (u16)writer.pos();
+                    writer.write(opa);
                     writer.write(opb);
                     return offset;
                 }
                 static u16 write(binary_writer_t& writer, f32 opa, f32 opb)
                 {
-                    u16 const offset = (u16)writer.write(opa);
+                    u16 const offset = (u16)writer.pos();
+                    writer.write(opa);
                     writer.write(opb);
                     return offset;
                 }
                 static u16 write(binary_writer_t& writer, f64 opa, f64 opb)
                 {
-                    u16 const offset = (u16)writer.write(opa);
+                    u16 const offset = (u16)writer.pos();
+                    writer.write(opa);
                     writer.write(opb);
                     return offset;
                 }
                 static u16 write(binary_writer_t& writer, va_r_t var)
                 {
-                    u16 const offset = (u16)writer.write(var.mType);
+                    u16 const offset = (u16)writer.pos();
+                    writer.write(var.mType);
                     writer.write(var.mRef[0]);
                     return offset;
                 }
                 static u16 write(binary_writer_t& writer, runes_reader_t const& reader)
                 {
                     crunes_t  r      = reader.get_current();
-                    u16 const offset = writer.write((u16)r.m_type);
+                    u16 const offset = (u16)writer.pos();
+                    writer.write((u16)r.m_type);
                     writer.write((uptr)r.m_runes.m_ascii.m_str);
                     writer.write((uptr)r.m_runes.m_ascii.m_end);
                     return offset;
                 }
-                static s32 read_s32(binary_reader_t& reader)
-                {
-                    s32 value;
-                    reader.read(value);
-                    return value;
-                }
-                static s64 read_s64(binary_reader_t& reader)
-                {
-                    s64 value;
-                    reader.read(value);
-                    return value;
-                }
-                static u32 read_u32(binary_reader_t& reader)
-                {
-                    u32 value;
-                    reader.read(value);
-                    return value;
-                }
-                static uchar32 read_uchar32(binary_reader_t& reader)
-                {
-                    u32 value;
-                    reader.read(value);
-                    return (uchar32)value;
-                }
-                static u64 read_u64(binary_reader_t& reader)
-                {
-                    u64 value;
-                    reader.read(value);
-                    return value;
-                }
-                static f32 read_f32(binary_reader_t& reader)
-                {
-                    f32 value;
-                    reader.read(value);
-                    return value;
-                }
-                static f64 read_f64(binary_reader_t& reader)
-                {
-                    f64 value;
-                    reader.read(value);
-                    return value;
-                }
-                static va_r_t read_var(binary_reader_t& reader)
+                static s32     read_s32(binary_reader_t& reader) { return reader.read_s32(); }
+                static s64     read_s64(binary_reader_t& reader) { return reader.read_s64(); }
+                static u32     read_u32(binary_reader_t& reader) { return reader.read_u32(); }
+                static uchar32 read_uchar32(binary_reader_t& reader) { return (uchar32)reader.read_u32(); }
+                static u64     read_u64(binary_reader_t& reader) { return reader.read_u64(); }
+                static f32     read_f32(binary_reader_t& reader) { return reader.read_f32(); }
+                static f64     read_f64(binary_reader_t& reader) { return reader.read_f64(); }
+                static va_r_t  read_var(binary_reader_t& reader)
                 {
                     va_r_t var;
                     var.mType   = reader.read_u16();
@@ -490,10 +464,14 @@ namespace xcore
                 case eWhile: result = fnWhile(ctxt); break;
                 case eUntil: result = fnUntil(ctxt); break;
                 case eExtract: result = fnExtract(ctxt, operands_t::read_var(m_program)); break;
-                case eEnclosed: result = fnEnclosed(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program)); break;
+                case eEnclosed:
+                    result = fnEnclosed(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program));
+                    break;
                 case eAny: result = fnAny(ctxt); break;
                 case eIn: result = fnIn(ctxt, operands_t::read_reader(m_program)); break;
-                case eBetween: result = fnBetween(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program)); break;
+                case eBetween:
+                    result = fnBetween(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program));
+                    break;
                 case eAlphabet: result = fnAlphabet(ctxt); break;
                 case eDigit: result = fnDigit(ctxt); break;
                 case eHex: result = fnHex(ctxt); break;
@@ -505,12 +483,24 @@ namespace xcore
                 case eWord: result = fnWord(ctxt); break;
                 case eEndOfText: result = fnEndOfText(ctxt); break;
                 case eEndOfLine: result = fnEndOfLine(ctxt); break;
-                case eUnsigned32: result = fnUnsigned32(ctxt, operands_t::read_u32(m_program), operands_t::read_u32(m_program)); break;
-                case eUnsigned64: result = fnUnsigned64(ctxt, operands_t::read_u64(m_program), operands_t::read_u64(m_program)); break;
-                case eInteger32: result = fnInteger32(ctxt, operands_t::read_s32(m_program), operands_t::read_s32(m_program)); break;
-                case eInteger64: result = fnInteger64(ctxt, operands_t::read_s64(m_program), operands_t::read_s64(m_program)); break;
-                case eFloat32: result = fnFloat32(ctxt, operands_t::read_f32(m_program), operands_t::read_f32(m_program)); break;
-                case eFloat64: result = fnFloat64(ctxt, operands_t::read_f64(m_program), operands_t::read_f64(m_program)); break;
+                case eUnsigned32:
+                    result = fnUnsigned32(ctxt, operands_t::read_u32(m_program), operands_t::read_u32(m_program));
+                    break;
+                case eUnsigned64:
+                    result = fnUnsigned64(ctxt, operands_t::read_u64(m_program), operands_t::read_u64(m_program));
+                    break;
+                case eInteger32:
+                    result = fnInteger32(ctxt, operands_t::read_s32(m_program), operands_t::read_s32(m_program));
+                    break;
+                case eInteger64:
+                    result = fnInteger64(ctxt, operands_t::read_s64(m_program), operands_t::read_s64(m_program));
+                    break;
+                case eFloat32:
+                    result = fnFloat32(ctxt, operands_t::read_f32(m_program), operands_t::read_f32(m_program));
+                    break;
+                case eFloat64:
+                    result = fnFloat64(ctxt, operands_t::read_f64(m_program), operands_t::read_f64(m_program));
+                    break;
                 default: result = false;
             }
             return result;
@@ -925,7 +915,7 @@ namespace xcore
 
             runez_t<ascii::rune, 64> email_name;
             runez_t<ascii::rune, 64> email_domain;
-			m.Email(va_r_t(&email_name), va_r_t(&email_domain));
+            m.Email(va_r_t(&email_name), va_r_t(&email_domain));
 
             // For examples see:
             // - machine_t::Email()
