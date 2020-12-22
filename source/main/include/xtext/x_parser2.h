@@ -44,7 +44,6 @@ namespace xcore
                 Extract(integer)
             );
 
-            struct
             va_r_t r1c;
             auto rule1 = p.Sequence(
                 p.Index(idx).Is(':')->
@@ -95,9 +94,13 @@ namespace xcore
             static const u32 cALPHABET   = 2;
             static const u32 cNUMERIC    = 4;
             static const u32 cIGNORECASE = 8;
+            
+            // Call parser_t when starting a new code block. 
+            // You will not be able to write any additional commands to this block when it has been
+            // handed to another code block as input. From that moment on this code-block will be locked.
             struct code_t
             {
-                code_t* Extract(va_r_t const& var, code_t* code_block);
+                code_t* Extract(va_r_t const& var, code_t* lhs);
                 code_t* Not(code_t* lhs);
                 code_t* Or(code_t* lhs, code_t* rhs);
                 code_t* And(code_t* lhs, code_t* rhs);
@@ -149,7 +152,7 @@ namespace xcore
 
             bool Parse(runes_reader_t&);
 
-            code_t* Extract(va_r_t const& var, code_t* code_block);
+            code_t* Extract(va_r_t const& var, code_t* lhs);
             code_t* Not(code_t* lhs);
             code_t* Or(code_t* lhs, code_t* rhs);
             code_t* And(code_t* lhs, code_t* rhs);
