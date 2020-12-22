@@ -166,7 +166,7 @@ namespace xcore
                     var.mRef[0] = reader.read_u64();
                     return var;
                 }
-                static runes_reader_t read_reader(binary_reader_t& reader)
+                static crunes_t read_crunes(binary_reader_t& reader)
                 {
                     crunes_t str;
                     str.m_type                = (s32)reader.read_u16();
@@ -174,7 +174,7 @@ namespace xcore
                     str.m_runes.m_ascii.m_str = str.m_runes.m_ascii.m_bos;
                     str.m_runes.m_ascii.m_eos = (ascii::pcrune)reader.read_u64();
                     str.m_runes.m_ascii.m_end = str.m_runes.m_ascii.m_eos;
-                    return runes_reader_t(str);
+                    return str;
                 }
             };
 
@@ -231,13 +231,12 @@ namespace xcore
                 operands_t::write(m_code, _a, _b);
                 return *this;
             }
-            machine_t& emit_instr(eOpcode o, runes_reader_t const& reader)
+            machine_t& emit_instr(eOpcode o, crunes_t const& runes)
             {
                 emit_pop_handle(o);
                 emit_instr(o);
-                crunes_t current = reader.get_current();
-                operands_t::write(m_code, (u16)current.m_type);
-                operands_t::write(m_code, (u64)current.m_runes.m_ascii.m_str, (u64)current.m_runes.m_ascii.m_end);
+                operands_t::write(m_code, (u16)runes.m_type);
+                operands_t::write(m_code, (u64)runes.m_runes.m_ascii.m_str, (u64)runes.m_runes.m_ascii.m_end);
                 return *this;
             }
             machine_t& emit_instr(eOpcode o, va_r_t var)
@@ -287,14 +286,14 @@ namespace xcore
             machine_t& Extract(va_r_t var) { return emit_instr(eExtract, var); }
             machine_t& Enclosed(uchar32 _open, uchar32 _close) { return emit_instr(eEnclosed, (u32)_open, (u32)_close); }
             machine_t& Any() { return emit_instr(eAny); }
-            machine_t& In(runes_reader_t const& _chars) { return emit_instr(eIn, _chars); }
+            machine_t& In(crunes_t const& _chars) { return emit_instr(eIn, _chars); }
             machine_t& Between(uchar32 _from, uchar32 _until) { return emit_instr(eBetween, (u32)_from, (u32)_until); }
             machine_t& Alphabet() { return emit_instr(eAlphabet); }
             machine_t& Digit() { return emit_instr(eDigit); }
             machine_t& Hex() { return emit_instr(eHex); }
             machine_t& AlphaNumeric() { return emit_instr(eAlphaNumeric); }
-            machine_t& Exact(runes_reader_t const& _text) { return emit_instr(eExact, _text); }
-            machine_t& Like(runes_reader_t const& _text) { return emit_instr(eLike, _text); }
+            machine_t& Exact(crunes_t const& _text) { return emit_instr(eExact, _text); }
+            machine_t& Like(crunes_t const& _text) { return emit_instr(eLike, _text); }
             machine_t& WhiteSpace() { return emit_instr(eWhiteSpace); }
             machine_t& Is(uchar32 _c) { return emit_instr(eIs, _c); }
             machine_t& Word() { return emit_instr(eWord); }
@@ -356,7 +355,7 @@ namespace xcore
 
         machine_t& machine_t::Email(va_r_t email_name, va_r_t email_domain)
         {
-            runes_reader_t validchars((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 19);
+            crunes_t validchars((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 19);
             // clang-format off
             Sequence();
                 Extract(email_name);        // e.g. john.doe
@@ -468,7 +467,7 @@ namespace xcore
                     result = fnEnclosed(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program));
                     break;
                 case eAny: result = fnAny(ctxt); break;
-                case eIn: result = fnIn(ctxt, operands_t::read_reader(m_program)); break;
+                case eIn: result = fnIn(ctxt, operands_t::read_crunes(m_program)); break;
                 case eBetween:
                     result = fnBetween(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program));
                     break;
@@ -476,8 +475,8 @@ namespace xcore
                 case eDigit: result = fnDigit(ctxt); break;
                 case eHex: result = fnHex(ctxt); break;
                 case eAlphaNumeric: result = fnAlphaNumeric(ctxt); break;
-                case eExact: result = fnExact(ctxt, operands_t::read_reader(m_program)); break;
-                case eLike: result = fnLike(ctxt, operands_t::read_reader(m_program)); break;
+                case eExact: result = fnExact(ctxt, operands_t::read_crunes(m_program)); break;
+                case eLike: result = fnLike(ctxt, operands_t::read_crunes(m_program)); break;
                 case eWhiteSpace: result = fnWhiteSpace(ctxt); break;
                 case eIs: result = fnIs(ctxt, operands_t::read_uchar32(m_program)); break;
                 case eWord: result = fnWord(ctxt); break;
@@ -1054,7 +1053,7 @@ namespace xcore
                 return *this;
             }
 
-            parser_t& In(runes_reader_t const& _chars)
+            parser_t& In(crunes_t const& _chars)
             {
                 machine_t* machine = (machine_t*)m_buffer.data();
                 machine->In(_chars);
@@ -1096,14 +1095,14 @@ namespace xcore
                 return *this;
             }
 
-            parser_t& Exact(runes_reader_t const& _text)
+            parser_t& Exact(crunes_t const& _text)
             {
                 machine_t* machine = (machine_t*)m_buffer.data();
                 machine->Exact(_text);
                 return *this;
             }
 
-            parser_t& Like(runes_reader_t const& _text)
+            parser_t& Like(crunes_t const& _text)
             {
                 machine_t* machine = (machine_t*)m_buffer.data();
                 machine->Like(_text);

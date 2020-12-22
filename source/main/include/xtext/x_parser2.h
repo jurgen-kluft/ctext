@@ -25,11 +25,60 @@ namespace xcore
 
             p.Sequence();
                 p.Until();
-                    p.Exact("integer");
+                    p.Extract(integer);
+                        p.Exact("integer");
+                    p.Pop();
                 p.Pop();
                 p.Separator('=');
                 p.Extract(integer);
             p.Pop();
+
+            p.Sequence(
+                p.Until(p.Is('='),
+                        p.ZeroOrMore(p.Whitespace()).
+                        p.Extract(integer,
+                            p.Unsigned32()
+                        )
+                ).
+                Separator('=').
+                Extract(integer)
+            );
+
+            struct
+            va_r_t r1c;
+            auto rule1 = p.Sequence(
+                p.Index(idx).Is(':')->
+                Digest(p.cWHITESPACE->
+                Or(
+                    p.Sequence(
+                        p.Is('"')->Extract(r1c, p.Until(p.Is('"'), p.Any()))->
+                        p.Digest(p.cWHITESPACE)->
+                        p.EOL()
+                    ),
+                    p.Sequence(
+                        p.Digest(p.cWHITESPACE)->
+                        p.Until(p.Or(p.Is('|'), p.EOL()),
+                            p.Sequence(
+                                p.Digest(p.cWHITESPACE)->
+                                p.Integer32(lvars)->
+                                p.Digest(p.cWHITESPACE)
+                            )
+                        )->
+                        p.Or(
+                            p.EOL(),
+                            p.Sequence(
+                                p.Until(p.EOL(),
+                                    p.Sequence(
+                                        p.Digest(p.cWHITESPACE)->
+                                        p.Integer32(rvars)->
+                                        p.Digest(p.cWHITESPACE)
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            );
 
             runes_reader_t text("This is an integer = 512 in text to be parsed");
             bool valid = p.Parse(text);
@@ -39,57 +88,113 @@ namespace xcore
 
             alloc->deallocate(buffer);
         */
+
         struct parser_t
         {
+            static const u32 cWHITESPACE = 1;
+            static const u32 cALPHABET   = 2;
+            static const u32 cNUMERIC    = 4;
+            static const u32 cIGNORECASE = 8;
+            struct code_t
+            {
+                code_t* Extract(va_r_t const& var, code_t* code_block);
+                code_t* Not(code_t* lhs);
+                code_t* Or(code_t* lhs, code_t* rhs);
+                code_t* And(code_t* lhs, code_t* rhs);
+                code_t* Sequence(code_t* lhs);
+                code_t* Within(s32 _min = 0, s32 _max = 0x7fffffff);
+                code_t* Times(s32 _count);
+                code_t* Digest(u32 flags = cWHITESPACE);
+                code_t* OneOrMore(code_t* code);
+                code_t* ZeroOrMore(code_t* code);
+                code_t* ZeroOrOne(code_t* code);
+                code_t* While(code_t* code);
+                code_t* Until(code_t* until, code_t* code);
+                code_t* Enclosed(uchar32 _open, uchar32 _close);
+                code_t* Any();
+                code_t* In(crunes_t const& _chars);
+                code_t* Between(uchar32 _from, uchar32 _until);
+                code_t* Alphabet();
+                code_t* Digit();
+                code_t* Hex();
+                code_t* AlphaNumeric();
+                code_t* Exact(crunes_t const& _text);
+                code_t* Like(crunes_t const& _text);
+                code_t* WhiteSpace();
+                code_t* Is(uchar32 _c);
+                code_t* Word();
+                code_t* EndOfText();
+                code_t* EndOfLine();
+                code_t* Unsigned32(u32 _min = 0, u32 _max = 0xffffffff);
+                code_t* Unsigned64(u64 _min = 0, u64 _max = 0xffffffffffffffffUL);
+                code_t* Integer32(s32 _min = 0, s32 _max = 0x7fffffff);
+                code_t* Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL);
+                code_t* Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f);
+                code_t* Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f);
+                code_t* Email(va_r_t email_name, va_r_t email_domain);
+                code_t* IPv4();
+                code_t* Host();
+                code_t* Date();
+                code_t* Time();
+                code_t* Phone();
+                code_t* ServerAddress();
+                code_t* URI();
+
+            private:
+                u16       m_size;   // Code Block starts at 'begin' and ends at 'begin + size'
+                u16       m_flags;  // State of this object, OPEN or CLOSED
+            };
+
             parser_t(buffer_t buffer);
 
-            bool      Parse(runes_reader_t&);
-            parser_t& Extract(va_r_t const& var);
-            parser_t& Pop();
-            parser_t& Not();
-            parser_t& Or();
-            parser_t& And();
-            parser_t& Sequence();
-            parser_t& Within(s32 _min = 0, s32 _max = 0x7fffffff);
-            parser_t& Times(s32 _count);
-            parser_t& OneOrMore();
-            parser_t& ZeroOrMore();
-            parser_t& ZeroOrOne();
-            parser_t& While();
-            parser_t& Until();
-            parser_t& Enclosed(uchar32 _open, uchar32 _close);
-            parser_t& Any();
-            parser_t& In(runes_reader_t const& _chars);
-            parser_t& Between(uchar32 _from, uchar32 _until);
-            parser_t& Alphabet();
-            parser_t& Digit();
-            parser_t& Hex();
-            parser_t& AlphaNumeric();
-            //parser_t& Exact(const char* _text);
-            parser_t& Separator(uchar32 _c);
-            parser_t& Exact(runes_reader_t const& _text);
-            parser_t& Like(runes_reader_t const& _text);
-            parser_t& WhiteSpace();
-            parser_t& Is(uchar32 _c);
-            parser_t& Word();
-            parser_t& EndOfText();
-            parser_t& EndOfLine();
-            parser_t& Unsigned32(u32 _min = 0, u32 _max = 0xffffffff);
-            parser_t& Unsigned64(u64 _min = 0, u64 _max = 0xffffffffffffffffUL);
-            parser_t& Integer32(s32 _min = 0, s32 _max = 0x7fffffff);
-            parser_t& Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL);
-            parser_t& Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f);
-            parser_t& Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f);
-            parser_t& Email();
-            parser_t& IPv4();
-            parser_t& Host();
-            parser_t& Date();
-            parser_t& Time();
-            parser_t& Phone();
-            parser_t& ServerAddress();
-            parser_t& URI();
+            bool Parse(runes_reader_t&);
 
-            buffer_t m_buffer;
+            code_t* Extract(va_r_t const& var, code_t* code_block);
+            code_t* Not(code_t* lhs);
+            code_t* Or(code_t* lhs, code_t* rhs);
+            code_t* And(code_t* lhs, code_t* rhs);
+            code_t* Sequence(code_t* lhs);
+            code_t* Within(s32 _min = 0, s32 _max = 0x7fffffff);
+            code_t* Times(s32 _count);
+            code_t* Digest(u32 flags = cWHITESPACE);
+            code_t* OneOrMore(code_t* code);
+            code_t* ZeroOrMore(code_t* code);
+            code_t* ZeroOrOne(code_t* code);
+            code_t* While(code_t* code);
+            code_t* Until(code_t* until, code_t* code);
+            code_t* Enclosed(uchar32 _open, uchar32 _close);
+            code_t* Any();
+            code_t* In(crunes_t const& _chars);
+            code_t* Between(uchar32 _from, uchar32 _until);
+            code_t* Alphabet();
+            code_t* Digit();
+            code_t* Hex();
+            code_t* AlphaNumeric();
+            code_t* Exact(crunes_t const& _text);
+            code_t* Like(crunes_t const& _text);
+            code_t* WhiteSpace();
+            code_t* Is(uchar32 _c);
+            code_t* Word();
+            code_t* EndOfText();
+            code_t* EndOfLine();
+            code_t* Unsigned32(u32 _min = 0, u32 _max = 0xffffffff);
+            code_t* Unsigned64(u64 _min = 0, u64 _max = 0xffffffffffffffffUL);
+            code_t* Integer32(s32 _min = 0, s32 _max = 0x7fffffff);
+            code_t* Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL);
+            code_t* Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f);
+            code_t* Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f);
+            code_t* Email(va_r_t email_name, va_r_t email_domain);
+            code_t* IPv4();
+            code_t* Host();
+            code_t* Date();
+            code_t* Time();
+            code_t* Phone();
+            code_t* ServerAddress();
+            code_t* URI();
+
+            buffer_t         m_buffer;
+            binary_writer_t* m_writer;
+            code_t           m_main;
         };
 
     } // namespace xparser
