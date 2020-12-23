@@ -11,7 +11,7 @@
 
 namespace xcore
 {
-    namespace xparser
+    namespace xparser2
     {
         // Minimal parser interface / API
         /*
@@ -21,63 +21,16 @@ namespace xcore
             parser_t p(buffer_t(buffer, 1024));
 
             s32 value;
-            va_r_t integer(&value);
+            va_r_t var(&value);
 
             p.Sequence();
                 p.Until();
-                    p.Extract(integer);
-                        p.Exact("integer");
+                    p.Is('=');
+                    p.Extract(&var);
+                        p.Unsigned32();
                     p.Pop();
                 p.Pop();
-                p.Separator('=');
-                p.Extract(integer);
             p.Pop();
-
-            p.Sequence(
-                p.Until(p.Is('='),
-                        p.ZeroOrMore(p.Whitespace()).
-                        p.Extract(integer,
-                            p.Unsigned32()
-                        )
-                ).
-                Separator('=').
-                Extract(integer)
-            );
-
-            va_r_t r1c;
-            auto rule1 = p.Sequence(
-                p.Index(idx).Is(':')->
-                Digest(p.cWHITESPACE->
-                Or(
-                    p.Sequence(
-                        p.Is('"')->Extract(r1c, p.Until(p.Is('"'), p.Any()))->
-                        p.Digest(p.cWHITESPACE)->
-                        p.EOL()
-                    ),
-                    p.Sequence(
-                        p.Digest(p.cWHITESPACE)->
-                        p.Until(p.Or(p.Is('|'), p.EOL()),
-                            p.Sequence(
-                                p.Digest(p.cWHITESPACE)->
-                                p.Integer32(lvars)->
-                                p.Digest(p.cWHITESPACE)
-                            )
-                        )->
-                        p.Or(
-                            p.EOL(),
-                            p.Sequence(
-                                p.Until(p.EOL(),
-                                    p.Sequence(
-                                        p.Digest(p.cWHITESPACE)->
-                                        p.Integer32(rvars)->
-                                        p.Digest(p.cWHITESPACE)
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            );
 
             runes_reader_t text("This is an integer = 512 in text to be parsed");
             bool valid = p.Parse(text);
@@ -95,109 +48,55 @@ namespace xcore
             static const u32 cNUMERIC    = 4;
             static const u32 cIGNORECASE = 8;
             
-            // Call parser_t when starting a new code block. 
-            // You will not be able to write any additional commands to this block when it has been
-            // handed to another code block as input. From that moment on this code-block will be locked.
-            struct code_t
-            {
-                code_t* Extract(va_r_t const& var, code_t* lhs);
-                code_t* Not(code_t* lhs);
-                code_t* Or(code_t* lhs, code_t* rhs);
-                code_t* And(code_t* lhs, code_t* rhs);
-                code_t* Sequence(code_t* lhs);
-                code_t* Within(s32 _min = 0, s32 _max = 0x7fffffff);
-                code_t* Times(s32 _count);
-                code_t* Digest(u32 flags = cWHITESPACE);
-                code_t* OneOrMore(code_t* code);
-                code_t* ZeroOrMore(code_t* code);
-                code_t* ZeroOrOne(code_t* code);
-                code_t* While(code_t* code);
-                code_t* Until(code_t* until, code_t* code);
-                code_t* Enclosed(uchar32 _open, uchar32 _close);
-                code_t* Any();
-                code_t* In(crunes_t const& _chars);
-                code_t* Between(uchar32 _from, uchar32 _until);
-                code_t* Alphabet();
-                code_t* Digit();
-                code_t* Hex();
-                code_t* AlphaNumeric();
-                code_t* Exact(crunes_t const& _text);
-                code_t* Like(crunes_t const& _text);
-                code_t* WhiteSpace();
-                code_t* Is(uchar32 _c);
-                code_t* Word();
-                code_t* EndOfText();
-                code_t* EndOfLine();
-                code_t* Unsigned32(u32 _min = 0, u32 _max = 0xffffffff);
-                code_t* Unsigned64(u64 _min = 0, u64 _max = 0xffffffffffffffffUL);
-                code_t* Integer32(s32 _min = 0, s32 _max = 0x7fffffff);
-                code_t* Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL);
-                code_t* Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f);
-                code_t* Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f);
-                code_t* Email(va_r_t email_name, va_r_t email_domain);
-                code_t* IPv4();
-                code_t* Host();
-                code_t* Date();
-                code_t* Time();
-                code_t* Phone();
-                code_t* ServerAddress();
-                code_t* URI();
-
-            private:
-                u16       m_size;   // Code Block starts at 'begin' and ends at 'begin + size'
-                u16       m_flags;  // State of this object, OPEN or CLOSED
-            };
-
             parser_t(buffer_t buffer);
 
             bool Parse(runes_reader_t&);
 
-            code_t* Extract(va_r_t const& var, code_t* lhs);
-            code_t* Not(code_t* lhs);
-            code_t* Or(code_t* lhs, code_t* rhs);
-            code_t* And(code_t* lhs, code_t* rhs);
-            code_t* Sequence(code_t* lhs);
-            code_t* Within(s32 _min = 0, s32 _max = 0x7fffffff);
-            code_t* Times(s32 _count);
-            code_t* Digest(u32 flags = cWHITESPACE);
-            code_t* OneOrMore(code_t* code);
-            code_t* ZeroOrMore(code_t* code);
-            code_t* ZeroOrOne(code_t* code);
-            code_t* While(code_t* code);
-            code_t* Until(code_t* until, code_t* code);
-            code_t* Enclosed(uchar32 _open, uchar32 _close);
-            code_t* Any();
-            code_t* In(crunes_t const& _chars);
-            code_t* Between(uchar32 _from, uchar32 _until);
-            code_t* Alphabet();
-            code_t* Digit();
-            code_t* Hex();
-            code_t* AlphaNumeric();
-            code_t* Exact(crunes_t const& _text);
-            code_t* Like(crunes_t const& _text);
-            code_t* WhiteSpace();
-            code_t* Is(uchar32 _c);
-            code_t* Word();
-            code_t* EndOfText();
-            code_t* EndOfLine();
-            code_t* Unsigned32(u32 _min = 0, u32 _max = 0xffffffff);
-            code_t* Unsigned64(u64 _min = 0, u64 _max = 0xffffffffffffffffUL);
-            code_t* Integer32(s32 _min = 0, s32 _max = 0x7fffffff);
-            code_t* Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL);
-            code_t* Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f);
-            code_t* Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f);
-            code_t* Email(va_r_t email_name, va_r_t email_domain);
-            code_t* IPv4();
-            code_t* Host();
-            code_t* Date();
-            code_t* Time();
-            code_t* Phone();
-            code_t* ServerAddress();
-            code_t* URI();
+            void Pop();
+            void Extract(va_r_t* var);
+            void Not();
+            void Or();
+            void And();
+            void Sequence();
+            void Within(s32 _min = 0, s32 _max = 0x7fffffff);
+            void Times(s32 _count);
+            void Digest(u32 flags = cWHITESPACE);
+            void OneOrMore();
+            void ZeroOrMore();
+            void ZeroOrOne();
+            void While();
+            void Until();
+            void Enclosed(uchar32 _open, uchar32 _close);
+            void Any();
+            void In(crunes_t const& _chars);
+            void Between(uchar32 _from, uchar32 _until);
+            void Alphabet();
+            void Digit();
+            void Hex();
+            void AlphaNumeric();
+            void Exact(crunes_t const& _text);
+            void Like(crunes_t const& _text);
+            void WhiteSpace();
+            void Is(uchar32 _c);
+            void Word();
+            void EndOfText();
+            void EndOfLine();
+            void Unsigned32(u32 _min = 0, u32 _max = 0xffffffff);
+            void Unsigned64(u64 _min = 0, u64 _max = 0xffffffffffffffffUL);
+            void Integer32(s32 _min = 0, s32 _max = 0x7fffffff);
+            void Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL);
+            void Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f);
+            void Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f);
+            void Email();
+            void IPv4();
+            void Host();
+            void Date();
+            void Time();
+            void Phone();
+            void ServerAddress();
+            void URI();
 
-            buffer_t         m_buffer;
-            binary_writer_t* m_writer;
-            code_t           m_main;
+            buffer_t m_buffer;
         };
 
     } // namespace xparser

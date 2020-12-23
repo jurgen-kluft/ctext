@@ -15,7 +15,7 @@ namespace xcore
             {
                 eNOP = 0,
                 // Manipulators (scope)
-                ePop = 0x8000,
+                ePop = 0xC0,
                 eNot,
                 eOr,
                 eAnd,
@@ -30,7 +30,7 @@ namespace xcore
                 eExtract,
                 eEnclosed,
                 // Filters
-                eAny = 0x1000,
+                eAny = 0x80,
                 eIn,
                 eBetween,
                 eAlphabet,
@@ -52,33 +52,12 @@ namespace xcore
                 eFloat32,
                 eFloat64,
                 // Utils
-                eIPv4 = 0x2000,
+                eIPv4 = 0x40,
                 eHost,
                 eEmail,
                 ePhone,
                 eServerAddress,
                 eUri
-            };
-
-            enum eOperandType
-            {
-                OPERAND_UCHAR32         = 0,
-                OPERAND_UCHAR32_UCHAR32 = 1,
-                OPERAND_U32             = 2,
-                OPERAND_U32_u32         = 3,
-                OPERAND_S32             = 4,
-                OPERAND_S32_S32         = 5,
-                OPERAND_U64             = 6,
-                OPERAND_U64_u64         = 7,
-                OPERAND_S64             = 8,
-                OPERAND_S64_s64         = 9,
-                OPERAND_F32             = 10,
-                OPERAND_F32_F32         = 11,
-                OPERAND_F64             = 12,
-                OPERAND_F64_F64         = 13, // min / max
-                OPERAND_S32_PTR         = 14, // va_r_t
-                OPERAND_S32_PTR_PTR     = 15, // runes_reader_t
-                OPERAND_READER          = 16,
             };
 
         private:
@@ -135,11 +114,10 @@ namespace xcore
                     writer.write(opb);
                     return offset;
                 }
-                static u16 write(binary_writer_t& writer, va_r_t var)
+                static u16 write(binary_writer_t& writer, va_r_t* var)
                 {
                     u16 const offset = (u16)writer.pos();
-                    writer.write(var.mType);
-                    writer.write(var.mRef[0]);
+                    writer.write((u64)var);
                     return offset;
                 }
                 static u16 write(binary_writer_t& writer, runes_reader_t const& reader)
@@ -158,12 +136,9 @@ namespace xcore
                 static u64     read_u64(binary_reader_t& reader) { return reader.read_u64(); }
                 static f32     read_f32(binary_reader_t& reader) { return reader.read_f32(); }
                 static f64     read_f64(binary_reader_t& reader) { return reader.read_f64(); }
-                static va_r_t  read_var(binary_reader_t& reader)
+                static va_r_t* read_var(binary_reader_t& reader)
                 {
-                    va_r_t var;
-                    var.mType   = reader.read_u16();
-                    var.mVar    = 0;
-                    var.mRef[0] = reader.read_u64();
+                    va_r_t* var = (va_r_t*)reader.read_u64();
                     return var;
                 }
                 static crunes_t read_crunes(binary_reader_t& reader)
@@ -271,7 +246,7 @@ namespace xcore
                 return fnExec(ctxt);
             }
 
-            machine_t& Pop() { return emit_instr(ePop); }
+            machine_t& Pop() { emit_pop_handle(ePop); return *this; }
             machine_t& Not() { return emit_instr(eNot); }
             machine_t& Or() { return emit_instr(eOr); }
             machine_t& And() { return emit_instr(eAnd); }
@@ -283,7 +258,7 @@ namespace xcore
             machine_t& ZeroOrOne() { return emit_instr(eZeroOrOne); }
             machine_t& While() { return emit_instr(eWhile); }
             machine_t& Until() { return emit_instr(eUntil); }
-            machine_t& Extract(va_r_t var) { return emit_instr(eExtract, var); }
+            machine_t& Extract(va_r_t* var) { return emit_instr(eExtract, var); }
             machine_t& Enclosed(uchar32 _open, uchar32 _close) { return emit_instr(eEnclosed, (u32)_open, (u32)_close); }
             machine_t& Any() { return emit_instr(eAny); }
             machine_t& In(crunes_t const& _chars) { return emit_instr(eIn, _chars); }
@@ -305,7 +280,7 @@ namespace xcore
             machine_t& Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL) { return emit_instr(eInteger64, _min, _max); }
             machine_t& Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f) { return emit_instr(eFloat32, _min, _max); }
             machine_t& Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f) { return emit_instr(eFloat64, _min, _max); }
-            machine_t& Email(va_r_t email_name, va_r_t email_domain);
+            machine_t& Email();
             machine_t& IPv4();
             machine_t& Host();
             machine_t& Date() { return *this; }
@@ -327,7 +302,7 @@ namespace xcore
             bool fnZeroOrOne(context_t& ctxt);
             bool fnWhile(context_t& ctxt);
             bool fnUntil(context_t& ctxt);
-            bool fnExtract(context_t& ctxt, va_r_t var);
+            bool fnExtract(context_t& ctxt, va_r_t* var);
             bool fnEnclosed(context_t& ctxt, uchar32 _open, uchar32 _close);
             bool fnAny(context_t& ctxt);
             bool fnIn(context_t& ctxt, runes_reader_t _chars);
@@ -353,33 +328,29 @@ namespace xcore
             XCORE_CLASS_PLACEMENT_NEW_DELETE
         };
 
-        machine_t& machine_t::Email(va_r_t email_name, va_r_t email_domain)
+        machine_t& machine_t::Email()
         {
             crunes_t validchars((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 19);
             // clang-format off
             Sequence();
-                Extract(email_name);        // e.g. john.doe
-                    OneOrMore();
-                        Or();
-                            AlphaNumeric();
-                            In(validchars);
-                        Pop();
+                OneOrMore();
+                    Or();
+                        AlphaNumeric();
+                        In(validchars);
                     Pop();
-                    ZeroOrMore();
-                        Or();
-                            Is('.');
-                            Is('_');
-                        Pop();
-                        Or();
-                            AlphaNumeric();
-                            In(validchars);
-                        Pop();
+                Pop();
+                ZeroOrMore();
+                    Or();
+                        Is('.');
+                        Is('_');
+                    Pop();
+                    Or();
+                        AlphaNumeric();
+                        In(validchars);
                     Pop();
                 Pop();
                 Is('@');
-                Extract(email_domain);        // e.g. hotmail.com
-                    Host();
-                Pop();
+                Host();
             Pop();
             // clang-format on
             return *this;
@@ -447,8 +418,13 @@ namespace xcore
             //@NOTE: When a fn that requires a Pop returns false we need to jump over any existing opcodes to arrive
             //       at the Pop opcode.
 
-            bool    result;
+            bool    result = true;
+            u32     jmp = 0;
             eOpcode o = (eOpcode)m_program.read_u16();
+            if ((o & ePop) == ePop)
+            {
+                jmp = m_program.read_u16();
+            }
             switch (o)
             {
                 case eOr: result = fnOr(ctxt); break;
@@ -500,8 +476,13 @@ namespace xcore
                 case eFloat64:
                     result = fnFloat64(ctxt, operands_t::read_f64(m_program), operands_t::read_f64(m_program));
                     break;
-                default: result = false;
             }
+
+            if ((o & ePop) == ePop)
+            {
+                m_program.seek(jmp);
+            }
+
             return result;
         }
 
@@ -607,7 +588,7 @@ namespace xcore
             ctxt.set_cursor(cursor);
             return false;
         }
-        bool machine_t::fnExtract(context_t& ctxt, va_r_t var)
+        bool machine_t::fnExtract(context_t& ctxt, va_r_t* var)
         {
             crunes_t::ptr_t start = ctxt.get_cursor();
             while (!fnOpcodeIs(ePop))
@@ -621,7 +602,7 @@ namespace xcore
             crunes_t       varrunes  = varreader.get_current();
             if (!varrunes.is_empty())
             {
-                var = varrunes;
+                *var = varrunes;
             }
             return true;
         }
@@ -904,17 +885,10 @@ namespace xcore
 
         void use_case_parser2()
         {
-            runez_t<ascii::rune, 128> namestr;
-            runes_writer_t            name(namestr);
-            runez_t<ascii::rune, 128> domainstr;
-            runes_writer_t            domain(domainstr);
-
             // clang-format off
             machine_t m;
 
-            runez_t<ascii::rune, 64> email_name;
-            runez_t<ascii::rune, 64> email_domain;
-            m.Email(va_r_t(&email_name), va_r_t(&email_domain));
+            m.Email();
 
             // For examples see:
             // - machine_t::Email()
@@ -928,9 +902,6 @@ namespace xcore
             // result == true !
         }
 
-        struct parser_ctxt_t
-        {
-        };
 
         struct parser_t
         {
@@ -950,7 +921,7 @@ namespace xcore
                 return machine->execute(reader, cursor);
             }
 
-            parser_t& Extract(va_r_t const& var)
+            parser_t& Extract(va_r_t* var)
             {
                 machine_t* machine = (machine_t*)m_buffer.data();
                 machine->Extract(var);
@@ -1186,10 +1157,10 @@ namespace xcore
                 return *this;
             }
 
-            parser_t& Email(va_r_t email_name, va_r_t email_domain)
+            parser_t& Email()
             {
                 machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Email(email_name, email_domain);
+                machine->Email();
                 return *this;
             }
 
