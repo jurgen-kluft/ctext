@@ -32,6 +32,14 @@ namespace xcore
                 p.Pop();
             p.Pop();
 
+            // What about?
+            p.Sequence(
+                p.Until(
+                    p.Is('=').
+                    p.Extract(&var, p.Unsigned32())
+                )
+            );
+
             runes_reader_t text("This is an integer = 512 in text to be parsed");
             bool valid = p.Parse(text);
 

@@ -16,11 +16,10 @@ namespace xcore
         // Minimal parser interface / API
         /*
             e.g.
-
-            
+         
             auto rule2 = p.Sequence(
                 p.Digest(p.cWHITESPACE)->
-                p.Until(p.Is('='), p.Any())->
+                p.Until(p.Is('=')))->
                 p.Digest(p.cWHITESPACE)->
                 p.Extract(&var,
                     p.Unsigned32()
