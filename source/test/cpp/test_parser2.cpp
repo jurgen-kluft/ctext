@@ -27,7 +27,7 @@ UNITTEST_SUITE_BEGIN(test_parser2)
             u8       data[2048];
             buffer_t buffer(2048, data);
 
-            xparser::parser_t parser(buffer);
+            xparser2::parser_t parser(buffer);
             
         }
     }

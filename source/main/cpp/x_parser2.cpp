@@ -4,9 +4,11 @@
 #include "xbase/x_va_list.h"
 #include "xbase/x_runes.h"
 
+#include "xtext/x_parser2.h"
+
 namespace xcore
 {
-    namespace xparser
+    namespace xparser2
     {
         class machine_t
         {
@@ -246,7 +248,11 @@ namespace xcore
                 return fnExec(ctxt);
             }
 
-            machine_t& Pop() { emit_pop_handle(ePop); return *this; }
+            machine_t& Pop()
+            {
+                emit_pop_handle(ePop);
+                return *this;
+            }
             machine_t& Not() { return emit_instr(eNot); }
             machine_t& Or() { return emit_instr(eOr); }
             machine_t& And() { return emit_instr(eAnd); }
@@ -324,6 +330,7 @@ namespace xcore
             bool fnInteger64(context_t& ctxt, s64 _min, s64 _max);
             bool fnFloat32(context_t& ctxt, f32 _min, f32 _max);
             bool fnFloat64(context_t& ctxt, f64 _min, f64 _max);
+            bool fnDecimal(context_t& ctxt);
 
             XCORE_CLASS_PLACEMENT_NEW_DELETE
         };
@@ -419,16 +426,26 @@ namespace xcore
             //       at the Pop opcode.
 
             bool    result = true;
-            u32     jmp = 0;
-            eOpcode o = (eOpcode)m_program.read_u16();
+            u32     jmp    = 0;
+            eOpcode o      = (eOpcode)m_program.read_u16();
             if ((o & ePop) == ePop)
             {
                 jmp = m_program.read_u16();
             }
             switch (o)
             {
-                case eOr: result = fnOr(ctxt); break;
+                case ePop:
+                case eNOP: break;
+
+                case eIPv4: // TODO
+                case eHost:
+                case eEmail:
+                case ePhone:
+                case eServerAddress:
+                case eUri: break;
+
                 case eNot: result = fnNot(ctxt); break;
+                case eOr: result = fnOr(ctxt); break;
                 case eAnd: result = fnAnd(ctxt); break;
                 case eSequence: result = fnSequence(ctxt); break;
                 case eWithin: result = fnWithin(ctxt, operands_t::read_s32(m_program), operands_t::read_s32(m_program)); break;
@@ -439,14 +456,10 @@ namespace xcore
                 case eWhile: result = fnWhile(ctxt); break;
                 case eUntil: result = fnUntil(ctxt); break;
                 case eExtract: result = fnExtract(ctxt, operands_t::read_var(m_program)); break;
-                case eEnclosed:
-                    result = fnEnclosed(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program));
-                    break;
+                case eEnclosed: result = fnEnclosed(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program)); break;
                 case eAny: result = fnAny(ctxt); break;
                 case eIn: result = fnIn(ctxt, operands_t::read_crunes(m_program)); break;
-                case eBetween:
-                    result = fnBetween(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program));
-                    break;
+                case eBetween: result = fnBetween(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program)); break;
                 case eAlphabet: result = fnAlphabet(ctxt); break;
                 case eDigit: result = fnDigit(ctxt); break;
                 case eHex: result = fnHex(ctxt); break;
@@ -455,27 +468,16 @@ namespace xcore
                 case eLike: result = fnLike(ctxt, operands_t::read_crunes(m_program)); break;
                 case eWhiteSpace: result = fnWhiteSpace(ctxt); break;
                 case eIs: result = fnIs(ctxt, operands_t::read_uchar32(m_program)); break;
+                case eDecimal: result = fnDecimal(ctxt); break;
                 case eWord: result = fnWord(ctxt); break;
                 case eEndOfText: result = fnEndOfText(ctxt); break;
                 case eEndOfLine: result = fnEndOfLine(ctxt); break;
-                case eUnsigned32:
-                    result = fnUnsigned32(ctxt, operands_t::read_u32(m_program), operands_t::read_u32(m_program));
-                    break;
-                case eUnsigned64:
-                    result = fnUnsigned64(ctxt, operands_t::read_u64(m_program), operands_t::read_u64(m_program));
-                    break;
-                case eInteger32:
-                    result = fnInteger32(ctxt, operands_t::read_s32(m_program), operands_t::read_s32(m_program));
-                    break;
-                case eInteger64:
-                    result = fnInteger64(ctxt, operands_t::read_s64(m_program), operands_t::read_s64(m_program));
-                    break;
-                case eFloat32:
-                    result = fnFloat32(ctxt, operands_t::read_f32(m_program), operands_t::read_f32(m_program));
-                    break;
-                case eFloat64:
-                    result = fnFloat64(ctxt, operands_t::read_f64(m_program), operands_t::read_f64(m_program));
-                    break;
+                case eUnsigned32: result = fnUnsigned32(ctxt, operands_t::read_u32(m_program), operands_t::read_u32(m_program)); break;
+                case eUnsigned64: result = fnUnsigned64(ctxt, operands_t::read_u64(m_program), operands_t::read_u64(m_program)); break;
+                case eInteger32: result = fnInteger32(ctxt, operands_t::read_s32(m_program), operands_t::read_s32(m_program)); break;
+                case eInteger64: result = fnInteger64(ctxt, operands_t::read_s64(m_program), operands_t::read_s64(m_program)); break;
+                case eFloat32: result = fnFloat32(ctxt, operands_t::read_f32(m_program), operands_t::read_f32(m_program)); break;
+                case eFloat64: result = fnFloat64(ctxt, operands_t::read_f64(m_program), operands_t::read_f64(m_program)); break;
             }
 
             if ((o & ePop) == ePop)
@@ -882,6 +884,7 @@ namespace xcore
             ctxt.set_cursor(cursor);
             return false;
         }
+        bool machine_t::fnDecimal(context_t& ctxt) { return fnUnsigned64(ctxt, 0, 0xffffffffffffffffUL); }
 
         void use_case_parser2()
         {
@@ -902,320 +905,314 @@ namespace xcore
             // result == true !
         }
 
-
-        struct parser_t
+        parser_t::parser_t(buffer_t buffer)
         {
-            parser_t(buffer_t buffer)
-            {
-                buffer_t   machine_buffer = buffer(0, sizeof(machine_t));
-                buffer_t   work_buffer    = buffer(sizeof(machine_t), buffer.size());
-                void*      machine_mem    = machine_buffer.data();
-                machine_t* machine        = new (machine_mem) machine_t();
-                machine->initialize(work_buffer);
-            }
+            buffer_t   machine_buffer = buffer(0, sizeof(machine_t));
+            buffer_t   work_buffer    = buffer(sizeof(machine_t), buffer.size());
+            void*      machine_mem    = machine_buffer.data();
+            machine_t* machine        = new (machine_mem) machine_t();
+            machine->initialize(work_buffer);
+        }
 
-            bool Parse(runes_reader_t& reader)
-            {
-                machine_t*      machine = (machine_t*)m_buffer.data();
-                crunes_t::ptr_t cursor  = reader.get_cursor();
-                return machine->execute(reader, cursor);
-            }
+        bool parser_t::Parse(runes_reader_t& reader)
+        {
+            machine_t*      machine = (machine_t*)m_buffer.data();
+            crunes_t::ptr_t cursor  = reader.get_cursor();
+            return machine->execute(reader, cursor);
+        }
 
-            parser_t& Extract(va_r_t* var)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Extract(var);
-                return *this;
-            }
-            parser_t& Pop()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Pop();
-                return *this;
-            }
-            parser_t& Not()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Not();
-                return *this;
-            }
+        parser_t& parser_t::Extract(va_r_t* var)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Extract(var);
+            return *this;
+        }
+        parser_t& parser_t::Pop()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Pop();
+            return *this;
+        }
+        parser_t& parser_t::Not()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Not();
+            return *this;
+        }
 
-            parser_t& Or()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Or();
-                return *this;
-            }
+        parser_t& parser_t::Or()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Or();
+            return *this;
+        }
 
-            parser_t& And()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->And();
-                return *this;
-            }
+        parser_t& parser_t::And()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->And();
+            return *this;
+        }
 
-            parser_t& Sequence()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Sequence();
-                return *this;
-            }
+        parser_t& parser_t::Sequence()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Sequence();
+            return *this;
+        }
 
-            parser_t& Within(s32 _min = 0, s32 _max = 0x7fffffff)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Within(_min, _max);
-                return *this;
-            }
+        parser_t& parser_t::Within(s32 _min, s32 _max)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Within(_min, _max);
+            return *this;
+        }
 
-            parser_t& Times(s32 _count)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Times(_count);
-                return *this;
-            }
+        parser_t& parser_t::Times(s32 _count)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Times(_count);
+            return *this;
+        }
 
-            parser_t& OneOrMore()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->OneOrMore();
-                return *this;
-            }
+        parser_t& parser_t::OneOrMore()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->OneOrMore();
+            return *this;
+        }
 
-            parser_t& ZeroOrMore()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->ZeroOrMore();
-                return *this;
-            }
+        parser_t& parser_t::ZeroOrMore()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->ZeroOrMore();
+            return *this;
+        }
 
-            parser_t& ZeroOrOne()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->ZeroOrOne();
-                return *this;
-            }
+        parser_t& parser_t::ZeroOrOne()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->ZeroOrOne();
+            return *this;
+        }
 
-            parser_t& While()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->While();
-                return *this;
-            }
+        parser_t& parser_t::While()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->While();
+            return *this;
+        }
 
-            parser_t& Until()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Until();
-                return *this;
-            }
+        parser_t& parser_t::Until()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Until();
+            return *this;
+        }
 
-            parser_t& Enclosed(uchar32 _open, uchar32 _close)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Enclosed(_open, _close);
-                return *this;
-            }
+        parser_t& parser_t::Enclosed(uchar32 _open, uchar32 _close)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Enclosed(_open, _close);
+            return *this;
+        }
 
-            parser_t& Any()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Any();
-                return *this;
-            }
+        parser_t& parser_t::Any()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Any();
+            return *this;
+        }
 
-            parser_t& In(crunes_t const& _chars)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->In(_chars);
-                return *this;
-            }
+        parser_t& parser_t::In(crunes_t const& _chars)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->In(_chars);
+            return *this;
+        }
 
-            parser_t& Between(uchar32 _from, uchar32 _until)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Between(_from, _until);
-                return *this;
-            }
+        parser_t& parser_t::Between(uchar32 _from, uchar32 _until)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Between(_from, _until);
+            return *this;
+        }
 
-            parser_t& Alphabet()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Alphabet();
-                return *this;
-            }
+        parser_t& parser_t::Alphabet()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Alphabet();
+            return *this;
+        }
 
-            parser_t& Digit()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Digit();
-                return *this;
-            }
+        parser_t& parser_t::Digit()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Digit();
+            return *this;
+        }
 
-            parser_t& Hex()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Hex();
-                return *this;
-            }
+        parser_t& parser_t::Hex()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Hex();
+            return *this;
+        }
 
-            parser_t& AlphaNumeric()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->AlphaNumeric();
-                return *this;
-            }
+        parser_t& parser_t::AlphaNumeric()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->AlphaNumeric();
+            return *this;
+        }
 
-            parser_t& Exact(crunes_t const& _text)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Exact(_text);
-                return *this;
-            }
+        parser_t& parser_t::Exact(crunes_t const& _text)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Exact(_text);
+            return *this;
+        }
 
-            parser_t& Like(crunes_t const& _text)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Like(_text);
-                return *this;
-            }
+        parser_t& parser_t::Like(crunes_t const& _text)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Like(_text);
+            return *this;
+        }
 
-            parser_t& WhiteSpace()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->WhiteSpace();
-                return *this;
-            }
+        parser_t& parser_t::WhiteSpace()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->WhiteSpace();
+            return *this;
+        }
 
-            parser_t& Is(uchar32 _c)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Is(_c);
-                return *this;
-            }
+        parser_t& parser_t::Is(uchar32 _c)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Is(_c);
+            return *this;
+        }
 
-            parser_t& Word()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Word();
-                return *this;
-            }
+        parser_t& parser_t::Word()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Word();
+            return *this;
+        }
 
-            parser_t& EndOfText()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->EndOfText();
-                return *this;
-            }
+        parser_t& parser_t::EndOfText()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->EndOfText();
+            return *this;
+        }
 
-            parser_t& EndOfLine()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->EndOfLine();
-                return *this;
-            }
+        parser_t& parser_t::EndOfLine()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->EndOfLine();
+            return *this;
+        }
 
-            parser_t& Unsigned32(u32 _min, u32 _max)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Unsigned32(_min, _max);
-                return *this;
-            }
+        parser_t& parser_t::Unsigned32(u32 _min, u32 _max)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Unsigned32(_min, _max);
+            return *this;
+        }
 
-            parser_t& Unsigned64(u64 _min, u64 _max)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Unsigned64(_min, _max);
-                return *this;
-            }
+        parser_t& parser_t::Unsigned64(u64 _min, u64 _max)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Unsigned64(_min, _max);
+            return *this;
+        }
 
-            parser_t& Integer32(s32 _min, s32 _max)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Integer32(_min, _max);
-                return *this;
-            }
+        parser_t& parser_t::Integer32(s32 _min, s32 _max)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Integer32(_min, _max);
+            return *this;
+        }
 
-            parser_t& Integer64(s64 _min, s64 _max)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Integer64(_min, _max);
-                return *this;
-            }
+        parser_t& parser_t::Integer64(s64 _min, s64 _max)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Integer64(_min, _max);
+            return *this;
+        }
 
-            parser_t& Float32(f32 _min, f32 _max)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Float32(_min, _max);
-                return *this;
-            }
+        parser_t& parser_t::Float32(f32 _min, f32 _max)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Float32(_min, _max);
+            return *this;
+        }
 
-            parser_t& Float64(f64 _min, f64 _max)
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Float64(_min, _max);
-                return *this;
-            }
+        parser_t& parser_t::Float64(f64 _min, f64 _max)
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Float64(_min, _max);
+            return *this;
+        }
 
-            parser_t& Email()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Email();
-                return *this;
-            }
+        parser_t& parser_t::Email()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Email();
+            return *this;
+        }
 
-            parser_t& IPv4()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->IPv4();
-                return *this;
-            }
+        parser_t& parser_t::IPv4()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->IPv4();
+            return *this;
+        }
 
-            parser_t& Host()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Host();
-                return *this;
-            }
+        parser_t& parser_t::Host()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Host();
+            return *this;
+        }
 
-            parser_t& Date()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Date();
-                return *this;
-            }
+        parser_t& parser_t::Date()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Date();
+            return *this;
+        }
 
-            parser_t& Time()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Time();
-                return *this;
-            }
+        parser_t& parser_t::Time()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Time();
+            return *this;
+        }
 
-            parser_t& Phone()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->Phone();
-                return *this;
-            }
+        parser_t& parser_t::Phone()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->Phone();
+            return *this;
+        }
 
-            parser_t& ServerAddress()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->ServerAddress();
-                return *this;
-            }
+        parser_t& parser_t::ServerAddress()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->ServerAddress();
+            return *this;
+        }
 
-            parser_t& URI()
-            {
-                machine_t* machine = (machine_t*)m_buffer.data();
-                machine->URI();
-                return *this;
-            }
+        parser_t& parser_t::URI()
+        {
+            machine_t* machine = (machine_t*)m_buffer.data();
+            machine->URI();
+            return *this;
+        }
 
-            buffer_t m_buffer;
-        };
-
-    } // namespace xparser
+    } // namespace xparser2
 
 } // namespace xcore
