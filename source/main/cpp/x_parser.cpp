@@ -4,26 +4,25 @@
 
 namespace xcore
 {
-    namespace xparser
+    namespace combparser
     {
-        xfilters::Any          xfilters::sAny;
-        xfilters::Alphabet     xfilters::sAlphabet;
-        xfilters::AlphaNumeric xfilters::sAlphaNumeric;
-        xfilters::Digit        xfilters::sDigit;
-        xfilters::Decimal      xfilters::sDecimal;
-        xfilters::EndOfLine    xfilters::sEOL;
-        xfilters::EndOfText    xfilters::sEOT;
-        xfilters::Hex          xfilters::sHex;
-        xfilters::WhiteSpace   xfilters::sWhitespace;
-        xfilters::Word         xfilters::sWord;
-        xutils::Email          xutils::sEmail;
-        xutils::Host           xutils::sHost;
-        xutils::IPv4           xutils::sIPv4;
-        xutils::Phone          xutils::sPhone;
-        xutils::ServerAddress  xutils::sServerAddress;
-        xutils::Uri            xutils::sURI;
+        filters::Any          filters::sAny;
+        filters::Alphabet     filters::sAlphabet;
+        filters::AlphaNumeric filters::sAlphaNumeric;
+        filters::Digit        filters::sDigit;
+        filters::Decimal      filters::sDecimal;
+        filters::EndOfLine    filters::sEOL;
+        filters::EndOfText    filters::sEOT;
+        filters::Hex          filters::sHex;
+        filters::WhiteSpace   filters::sWhitespace;
+        filters::Word         filters::sWord;
+        utils::Email          utils::sEmail;
+        utils::Host           utils::sHost;
+        utils::IPv4           utils::sIPv4;
+        utils::ServerAddress  utils::sServerAddress;
+        utils::Uri            utils::sURI;
 
-        namespace xmanipulators
+        namespace manipulators
         {
             bool Not::Check(runes_reader_t& _reader)
             {
@@ -173,15 +172,15 @@ namespace xcore
 
             bool Enclosed::Check(runes_reader_t& _reader)
             {
-                xfilters::Exact open(m_open);
-                xfilters::Exact close(m_close);
+                filters::Exact open(m_open);
+                filters::Exact close(m_close);
                 Sequence        a(open, m_tokenizer_a);
                 Sequence        b(a, close);
                 return b.Check(_reader);
             }
         } // namespace xmanipulators
 
-        namespace xfilters
+        namespace filters
         {
             bool Any::Check(runes_reader_t& _reader)
             {
@@ -197,6 +196,7 @@ namespace xcore
                     return false;
 
                 m_input.reset();
+
                 crunes_t::ptr_t inputcursor = m_input.get_cursor();
                 uchar32 const   s           = _reader.peek();
                 while (m_input.valid())
@@ -241,12 +241,14 @@ namespace xcore
 
             bool AlphaNumeric::Check(runes_reader_t& _reader)
             {
-                xmanipulators::Or r(sAlphabet, sDigit);
+                manipulators::Or r(sAlphabet, sDigit);
                 return r.Check(_reader);
             }
 
             bool Exact::Check(runes_reader_t& _reader)
             {
+				m_input.reset();
+
                 crunes_t::ptr_t rcursor = _reader.get_cursor();
                 crunes_t::ptr_t icursor = m_input.get_cursor();
                 while (m_input.valid())
@@ -266,7 +268,9 @@ namespace xcore
 
             bool Like::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t rcursor = _reader.get_cursor();
+				m_input.reset();
+				
+				crunes_t::ptr_t rcursor = _reader.get_cursor();
                 crunes_t::ptr_t icursor = m_input.get_cursor();
                 while (m_input.valid())
                 {
@@ -280,7 +284,7 @@ namespace xcore
                     m_input.skip();
                     _reader.skip();
                 }
-                return true;
+				return true;
             }
 
             bool WhiteSpace::Check(runes_reader_t& _reader) { return m_whitespace.Check(_reader); }
@@ -295,8 +299,8 @@ namespace xcore
                 return false;
             }
 
-            bool Decimal::Check(runes_reader_t& _reader) { return xmanipulators::OneOrMore(sDigit).Check(_reader); }
-            bool Word::Check(runes_reader_t& _reader) { return xmanipulators::OneOrMore(sAlphabet).Check(_reader); }
+            bool Decimal::Check(runes_reader_t& _reader) { return manipulators::OneOrMore(sDigit).Check(_reader); }
+            bool Word::Check(runes_reader_t& _reader) { return manipulators::OneOrMore(sAlphabet).Check(_reader); }
             bool EndOfText::Check(runes_reader_t& _reader) { return (_reader.peek() == ('\0')); }
 
 #if defined(PLATFORM_PC)
@@ -372,12 +376,12 @@ namespace xcore
 				_reader.set_cursor(start);
 				return false;
             }
-        } // namespace xfilters
+        } // namespace filters
 
-        namespace xutils
+        namespace utils
         {
-            using namespace xmanipulators;
-            using namespace xfilters;
+            using namespace manipulators;
+            using namespace filters;
 
             bool IPv4::Check(runes_reader_t& _reader) { return m_ipv4.Check(_reader); }
 
@@ -416,83 +420,12 @@ namespace xcore
                 Sequence   email(a, b);
                 return email.Check(_reader);
             }
-            bool Phone::Check(runes_reader_t& _reader)
-            {
-                Is         plus('+');
-                ZeroOrMore zom_plus(plus);
-                Is         open('(');
-                Is         close('(');
-                OneOrMore  oomdigit(xfilters::sDigit);
-                Sequence3  open_oomdigit_close(open, oomdigit, close);
-                ZeroOrMore zom_open_oomdigit_close(open_oomdigit_close);
-                ZeroOrMore zom_whitespace(sWhitespace);
-                In         spaceordash(" -", 2);
-                Sequence   spaceordash_oomdigit(spaceordash, oomdigit);
-                ZeroOrMore zom_spaceordash_oomdigit(spaceordash_oomdigit);
-
-                Sequence zom_open_oomdigit_close_whitespace(zom_open_oomdigit_close, zom_whitespace);
-                return zom_open_oomdigit_close_whitespace.Check(_reader);
-            }
 
             bool ServerAddress::Check(runes_reader_t& _reader) { return false; }
 
             bool Uri::Check(runes_reader_t& _reader) { return false; }
 
-        } // namespace xutils
-    }     // namespace xparser
+        } // namespace utils
+    }     // namespace parser
 
-    using namespace xcore::xparser;
-
-    stringprocessor_t::stringprocessor_t() {}
-    stringprocessor_t::stringprocessor_t(runes_reader_t const& str)
-    {
-        m_string = str;
-    }
-    stringprocessor_t::stringprocessor_t(runes_reader_t const& str, crunes_t::ptr_t cursor)
-    {
-        m_string = str;
-    }
-
-    bool stringprocessor_t::parse(xparser::tokenizer_t& tok)
-    {
-        crunes_t::ptr_t start  = m_string.get_cursor();
-        bool            result = tok.Check(m_string);
-        if (result)
-        {
-            m_lastTokenized = m_string.get_cursor();
-            m_string.set_cursor(start);
-        }
-        return result;
-    }
-
-    bool stringprocessor_t::validate(xparser::tokenizer_t& tok)
-    {
-        xmanipulators::Sequence validate(tok, xfilters::sEOT);
-        return validate.Check(m_string);
-    }
-
-    crunes_t stringprocessor_t::search(tokenizer_t& tok)
-    {
-        xmanipulators::Or search(xfilters::sEOT, tok);
-        bool              result = xmanipulators::Until(search).Check(m_string);
-        if (result && m_string.valid())
-        {
-            crunes_t::ptr_t start = m_string.get_cursor();
-            if (tok.Check(m_string))
-            {
-                crunes_t::ptr_t end = m_string.get_cursor();
-                crunes_t str = m_string.get_source();
-                return crunes_t(str, start, end);
-            }
-        }
-        return crunes_t();
-    }
-
-    bool stringprocessor_t::isEOT() { return (m_string.peek() == ('\0')); }
-
-    void stringprocessor_t::reset()
-    {
-        m_lastTokenized = crunes_t::ptr_t();
-        m_string.reset();
-    }
 } // namespace xcore
