@@ -9,9 +9,6 @@
 
 namespace xcore
 {
-    const uchar32 cEOL = '\n';
-    const uchar32 cEOF = 0x05;
-
     text_stream_t::text_stream_t(istream_t* stream, encoding e)
         : m_stream(stream)
         , m_buffer_data(nullptr)
