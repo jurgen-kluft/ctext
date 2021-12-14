@@ -20,10 +20,18 @@ namespace xcore
 
     bool    text_stream_t::readLine(crunes_t& line)
     {
-        if (m_buffer_data == nullptr)
-        {
+        if (m_buffer_data == nullptr) {
             m_buffer_data = (xbyte*)context_t::system_alloc()->allocate(4096, sizeof(void*));
             m_buffer_size = 4096;
+            m_buffer_idx = 0;
+            m_buffer_text.m_runes.m_ascii.m_bos = (ascii::prune)m_buffer_data;
+            m_buffer_text.m_runes.m_ascii.m_eos = (ascii::prune)m_buffer_data + m_buffer_size;
+            m_buffer_text.m_runes.m_ascii.m_str = m_buffer_text.m_runes.m_ascii.m_bos;
+            m_buffer_text.m_runes.m_ascii.m_end = m_buffer_text.m_runes.m_ascii.m_bos;
+        } 
+        else if (m_buffer_text.m_runes.m_ascii.m_str >= (m_buffer_text.m_runes.m_ascii.m_str + m_buffer_size/2)) {
+            // shift the top half of the buffer to the bottom half and then load new data into the top
+            // part of the buffer from the source stream
         }
 
         return false;

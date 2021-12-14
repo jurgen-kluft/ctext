@@ -24,6 +24,7 @@ namespace xcore
         istream_t* m_stream;
         xbyte* m_buffer_data;
         u32 m_buffer_size;
+        u32 m_buffer_idx;
         runes_t m_buffer_text;
 
 		virtual bool vcanSeek() const;
