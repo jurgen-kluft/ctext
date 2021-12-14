@@ -9,13 +9,25 @@
 
 namespace xcore
 {
-    text_stream_t::text_stream_t(istream_t* stream)
+    const uchar32 cEOL = '\n';
+    const uchar32 cEOF = 0x05;
+
+    text_stream_t::text_stream_t(istream_t* stream, encoding e)
         : m_stream(stream)
         , m_buffer_data(nullptr)
         , m_buffer_size(0)
         , m_buffer_text()
     {
-        
+        m_buffer_text.m_type = (s32)e;
+    }
+
+    static bool find_eol(crunes_t& text)
+    {
+        uchar32 c = text.read();
+        while (c != cEOL && c != cEOF) {
+            c = text.read();
+        }
+        return c==cEOL || c==cEOF;
     }
 
     bool    text_stream_t::readLine(crunes_t& line)
@@ -28,11 +40,9 @@ namespace xcore
             m_buffer_text.m_runes.m_ascii.m_eos = (ascii::prune)m_buffer_data + m_buffer_size;
             m_buffer_text.m_runes.m_ascii.m_str = m_buffer_text.m_runes.m_ascii.m_bos;
             m_buffer_text.m_runes.m_ascii.m_end = m_buffer_text.m_runes.m_ascii.m_bos;
-        } 
-        else if (m_buffer_text.m_runes.m_ascii.m_str >= (m_buffer_text.m_runes.m_ascii.m_str + m_buffer_size/2)) {
-            // shift the top half of the buffer to the bottom half and then load new data into the top
-            // part of the buffer from the source stream
         }
+        
+        
 
         return false;
     }
