@@ -22,17 +22,21 @@ namespace xcore
             encoding_utf16 = utf16::TYPE,
             encoding_utf32 = utf32::TYPE
         };
-        text_stream_t(istream_t* stream, encoding e = encoding_ascii);
+        text_stream_t(istream_t* stream, encoding e = encoding_utf8);
 
         bool readText(crunes_t& line, s64 length);
         bool readLine(crunes_t& line);
 
     protected:
         istream_t* m_stream;
+        s64        m_stream_pos;
+        u64        m_stream_len;
         xbyte*     m_buffer_data;
-        u32        m_buffer_size;
-        u32        m_buffer_idx;
-        runes_t    m_buffer_text;
+        s64        m_buffer_cap;
+        s64        m_buffer_size;
+        crunes_t   m_buffer_text;
+
+        bool       determineLine(crunes_t& line);
 
         virtual bool vcanSeek() const;
         virtual bool vcanRead() const;
