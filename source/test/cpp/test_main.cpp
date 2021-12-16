@@ -63,7 +63,6 @@ namespace xcore
 
         virtual void v_release()
         {
-            mAllocator->release();
             mAllocator = NULL;
         }
     };
@@ -80,12 +79,12 @@ bool gRunUnitTest(UnitTest::TestReporter& reporter)
 	xcore::context_t::set_assert_handler(&gAssertHandler);
 #endif
 
+	xcore::console->write("Configuration: ");
+	xcore::console->writeLine(TARGET_FULL_DESCR_STR);
+
 	xcore::alloc_t* systemAllocator = xcore::context_t::system_alloc();
 	xcore::UnitTestAllocator unittestAllocator( systemAllocator );
 	UnitTest::SetAllocator(&unittestAllocator);
-
-	xcore::console->write("Configuration: ");
-	xcore::console->writeLine(TARGET_FULL_DESCR_STR);
 
 	xcore::TestAllocator testAllocator(systemAllocator);
 	gTestAllocator = &testAllocator;
