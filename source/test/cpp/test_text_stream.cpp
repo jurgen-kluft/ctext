@@ -64,7 +64,7 @@ namespace xcore
 				else
 				{
 					buffer = nullptr;
-					count  = -1;
+					count  = m_size;
 				}
 			}
             return count;
@@ -87,9 +87,12 @@ UNITTEST_SUITE_BEGIN(test_text_stream)
         {
             mem_stream    memtext(read_text_txt, read_text_txt_len);
             text_stream_t text(&memtext, text_stream_t::encoding_ascii);
-
+            
+            crunes_t thisstr("this ");
             crunes_t line;
-            while (text.readLine(line)) {}
+            while (text.readLine(line)) {
+                CHECK_TRUE(starts_with(line, thisstr));
+            }
 
 			text.close();
 			memtext.close();

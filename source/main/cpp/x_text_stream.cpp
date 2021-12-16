@@ -11,7 +11,7 @@ namespace xcore
 {
     text_stream_t::text_stream_t(istream_t* stream, encoding e) : m_stream(stream), m_stream_len(0), m_stream_pos(0), m_buffer_data(nullptr), m_buffer_size(0), m_buffer_text()
     {
-        m_buffer_cap  = 4096; // Should be somewhere like "average line length" * 10
+        m_buffer_cap         = 4096; // Should be somewhere like "average line length" * 10
         m_buffer_text.m_type = (s32)e;
     }
 
@@ -38,6 +38,11 @@ namespace xcore
             m_buffer_text.skip(m_buffer_text_cursor, chars);
             return true;
         }
+        else
+        {
+            line.m_ascii.m_end = line.m_ascii.m_str;
+            line.m_ascii.m_eos = line.m_ascii.m_str;
+        }
         return false;
     }
 
@@ -45,17 +50,22 @@ namespace xcore
     {
         if (!determineLine(line))
         {
-            if (m_buffer_data == nullptr)
+            // Is there still any more data in the stream?
+            if (m_stream_pos >= m_stream_len)
+                return false;
+
+            if (m_buffer_data == nullptr && m_buffer_data0 == nullptr)
             {
                 if (m_stream->canZeroCopy())
                 {
-                    s64 read                            = m_stream->read0(m_buffer_data0, m_buffer_cap);
+                    s64 read                    = m_stream->read0(m_buffer_data0, m_buffer_cap);
                     m_buffer_text.m_ascii.m_str = (ascii::pcrune)m_buffer_data0;
                     m_buffer_text.m_ascii.m_bos = m_buffer_text.m_ascii.m_str;
                     m_buffer_text.m_ascii.m_eos = m_buffer_text.m_ascii.m_str + read;
                     m_buffer_text.m_ascii.m_end = m_buffer_text.m_ascii.m_eos;
-                    m_stream_pos                        = read;
-                    m_stream_len                        = m_stream->getLength();
+                    m_buffer_text_cursor        = m_buffer_text.m_ascii.m_str;
+                    m_stream_pos                = read;
+                    m_stream_len                = m_stream->getLength();
                 }
                 else
                 {
@@ -71,10 +81,6 @@ namespace xcore
             {
                 // Could not find EOL or EOF or there is no text left to scan
 
-                // Is there still any more data in the stream?
-                if (m_stream_pos >= m_stream_len)
-                    return false;
-
                 if (m_stream->canZeroCopy())
                 {
                     s64 rest     = m_buffer_text.m_ascii.m_end - m_buffer_text.m_ascii.m_str;
@@ -83,21 +89,23 @@ namespace xcore
                     m_stream->setPos(m_stream_pos);
 
                     s64 read = m_stream->read0(m_buffer_data0, m_buffer_cap);
-                    if (read == -1)
+                    if (m_buffer_data0 == nullptr || m_stream_pos >= m_stream_len || read == -1)
                     {
-                        m_buffer_text = crunes_t();
-                        m_stream_pos  = m_stream_len;
+                        m_buffer_text        = crunes_t();
+                        m_buffer_text_cursor = m_buffer_text.m_ascii.m_str;
+                        m_stream_pos         = m_stream_len;
                         return false;
                     }
                     m_buffer_text.m_ascii.m_str = (ascii::pcrune)m_buffer_data0;
                     m_buffer_text.m_ascii.m_bos = m_buffer_text.m_ascii.m_str;
                     m_buffer_text.m_ascii.m_eos = m_buffer_text.m_ascii.m_str + read;
                     m_buffer_text.m_ascii.m_end = m_buffer_text.m_ascii.m_eos;
+                    m_buffer_text_cursor        = m_buffer_text.m_ascii.m_str;
                 }
                 else
                 {
                     // Currently we are at the following position in our text buffer
-                    ascii::pcrune pos = m_buffer_text.m_ascii.m_str;
+                    ascii::pcrune pos = m_buffer_text_cursor.m_ascii;
 
                     // Move the 'rest' to the beginning of our buffer and join it with new data
                     xbyte* dst = m_buffer_data;
@@ -108,10 +116,13 @@ namespace xcore
                     m_buffer_size               = (u32)(dst - m_buffer_data);
                     s64       read_request_size = m_buffer_cap - m_buffer_size;
                     s64 const read_actual_size  = m_stream->read(dst, read_request_size);
-                    if (read_actual_size > 0)
+                    if (read_actual_size >= 0)
                     {
-                        m_stream_pos += read_actual_size;
                         m_buffer_size += read_actual_size;
+                        m_stream_pos += read_actual_size;
+                    } else {
+                        // an error occured
+                        m_stream_pos = m_stream_len;
                     }
 
                     // Adjust our m_buffer_text
@@ -119,6 +130,7 @@ namespace xcore
                     m_buffer_text.m_ascii.m_eos = (ascii::pcrune)m_buffer_data + m_buffer_size;
                     m_buffer_text.m_ascii.m_str = m_buffer_text.m_ascii.m_bos;
                     m_buffer_text.m_ascii.m_end = m_buffer_text.m_ascii.m_eos;
+                    m_buffer_text_cursor        = m_buffer_text.m_ascii.m_str;
                 }
             }
             if (!determineLine(line))
@@ -138,14 +150,15 @@ namespace xcore
     {
         if (m_buffer_data != nullptr)
         {
-            m_buffer_cap = 0;
             context_t::system_alloc()->deallocate(m_buffer_data);
-            m_buffer_data = nullptr;
-            m_buffer_size = 0;
-            m_stream_pos  = 0;
-            m_stream_len  = 0;
-            m_buffer_text = crunes_t();
         }
+        m_buffer_cap = 0;
+        m_buffer_data = nullptr;
+        m_buffer_data0 = nullptr;
+        m_buffer_size = 0;
+        m_stream_pos  = 0;
+        m_stream_len  = 0;
+        m_buffer_text = crunes_t();
 
         m_stream->close();
     }
