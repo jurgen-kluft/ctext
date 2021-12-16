@@ -9,54 +9,63 @@
 
 namespace xcore
 {
-    text_stream_t::text_stream_t(istream_t* stream, encoding e)
-        : m_stream(stream)
-        , m_stream_len(0)
-        , m_stream_pos(0)
-        , m_buffer_data(nullptr)
-        , m_buffer_size(0)
-        , m_buffer_text()
+    text_stream_t::text_stream_t(istream_t* stream, encoding e) : m_stream(stream), m_stream_len(0), m_stream_pos(0), m_buffer_data(nullptr), m_buffer_size(0), m_buffer_text()
     {
+        m_buffer_cap  = 4096; // Should be somewhere like "average line length" * 10
         m_buffer_text.m_type = (s32)e;
     }
 
     static bool find_eol(runes_t& text)
     {
         uchar32 c = text.read();
-        while (c != cEOL && c != cEOF) {
+        while (c != cEOL && c != cEOF)
+        {
             c = text.read();
         }
-        return c==cEOL || c==cEOF;
+        return c == cEOL || c == cEOF;
     }
 
-    bool    text_stream_t::determineLine(crunes_t& line)
+    bool text_stream_t::determineLine(crunes_t& line)
     {
-        erunes_t chars;
-        chars.eol();
-        chars.eof();
-        if (m_buffer_text.scan(chars))
+        erunes_t chars(erunes_t::eol | erunes_t::eof);
+        line.m_ascii.m_bos = m_buffer_text_cursor.m_ascii;
+        line.m_ascii.m_str = m_buffer_text_cursor.m_ascii;
+        if (m_buffer_text.scan(m_buffer_text_cursor, chars))
         {
             // We encountered a special character
-            line = m_buffer_text;
-            line.m_runes.m_ascii.m_end = m_buffer_text.m_runes.m_ascii.m_str;
-            m_buffer_text.skip(chars);
+            line.m_ascii.m_end = m_buffer_text_cursor.m_ascii;
+            line.m_ascii.m_eos = m_buffer_text_cursor.m_ascii;
+            m_buffer_text.skip(m_buffer_text_cursor, chars);
             return true;
         }
         return false;
     }
 
-    bool    text_stream_t::readLine(crunes_t& line)
+    bool text_stream_t::readLine(crunes_t& line)
     {
         if (!determineLine(line))
         {
-            if (m_buffer_data == nullptr) {
-                m_buffer_cap  = 4096;   // Should be somewhere like "average line length" * 10
-                m_buffer_data = (xbyte*)context_t::system_alloc()->allocate(m_buffer_cap, sizeof(void*));
-                m_buffer_size = 0;
-                m_stream_pos = 0;
-                m_stream_len = m_stream->getLength();
-                m_buffer_size = m_stream->read(m_buffer_data, m_buffer_cap);
-                m_stream_pos += m_buffer_size;
+            if (m_buffer_data == nullptr)
+            {
+                if (m_stream->canZeroCopy())
+                {
+                    s64 read                            = m_stream->read0(m_buffer_data0, m_buffer_cap);
+                    m_buffer_text.m_ascii.m_str = (ascii::pcrune)m_buffer_data0;
+                    m_buffer_text.m_ascii.m_bos = m_buffer_text.m_ascii.m_str;
+                    m_buffer_text.m_ascii.m_eos = m_buffer_text.m_ascii.m_str + read;
+                    m_buffer_text.m_ascii.m_end = m_buffer_text.m_ascii.m_eos;
+                    m_stream_pos                        = read;
+                    m_stream_len                        = m_stream->getLength();
+                }
+                else
+                {
+                    m_buffer_data = (xbyte*)context_t::system_alloc()->allocate(m_buffer_cap, sizeof(void*));
+                    m_buffer_size = 0;
+                    m_stream_pos  = 0;
+                    m_stream_len  = m_stream->getLength();
+                    m_buffer_size = m_stream->read(m_buffer_data, m_buffer_cap);
+                    m_stream_pos += m_buffer_size;
+                }
             }
             else
             {
@@ -66,31 +75,52 @@ namespace xcore
                 if (m_stream_pos >= m_stream_len)
                     return false;
 
-                // Currently we are at the following position in our text buffer
-                ascii::pcrune pos = m_buffer_text.m_runes.m_ascii.m_str;
+                if (m_stream->canZeroCopy())
+                {
+                    s64 rest     = m_buffer_text.m_ascii.m_end - m_buffer_text.m_ascii.m_str;
+                    m_stream_pos = m_stream->getPos();
+                    m_stream_pos -= rest;
+                    m_stream->setPos(m_stream_pos);
 
-                // Move the 'rest' to the beginning of our buffer and join it with new data
-                xbyte* dst = m_buffer_data;
-                while (pos < m_buffer_text.m_runes.m_ascii.m_end)
-                {
-                    *dst++ = (xbyte)*pos++;
+                    s64 read = m_stream->read0(m_buffer_data0, m_buffer_cap);
+                    if (read == -1)
+                    {
+                        m_buffer_text = crunes_t();
+                        m_stream_pos  = m_stream_len;
+                        return false;
+                    }
+                    m_buffer_text.m_ascii.m_str = (ascii::pcrune)m_buffer_data0;
+                    m_buffer_text.m_ascii.m_bos = m_buffer_text.m_ascii.m_str;
+                    m_buffer_text.m_ascii.m_eos = m_buffer_text.m_ascii.m_str + read;
+                    m_buffer_text.m_ascii.m_end = m_buffer_text.m_ascii.m_eos;
                 }
-                m_buffer_size = (u32)(dst - m_buffer_data);
-                s64 read_request_size = m_buffer_cap - m_buffer_size;
-                s64 const read_actual_size = m_stream->read(dst, read_request_size);
-                if (read_actual_size > 0)
+                else
                 {
-                    m_stream_pos += read_actual_size;
-                    m_buffer_size += read_actual_size;
+                    // Currently we are at the following position in our text buffer
+                    ascii::pcrune pos = m_buffer_text.m_ascii.m_str;
+
+                    // Move the 'rest' to the beginning of our buffer and join it with new data
+                    xbyte* dst = m_buffer_data;
+                    while (pos < m_buffer_text.m_ascii.m_end)
+                    {
+                        *dst++ = (xbyte)*pos++;
+                    }
+                    m_buffer_size               = (u32)(dst - m_buffer_data);
+                    s64       read_request_size = m_buffer_cap - m_buffer_size;
+                    s64 const read_actual_size  = m_stream->read(dst, read_request_size);
+                    if (read_actual_size > 0)
+                    {
+                        m_stream_pos += read_actual_size;
+                        m_buffer_size += read_actual_size;
+                    }
+
+                    // Adjust our m_buffer_text
+                    m_buffer_text.m_ascii.m_bos = (ascii::pcrune)m_buffer_data;
+                    m_buffer_text.m_ascii.m_eos = (ascii::pcrune)m_buffer_data + m_buffer_size;
+                    m_buffer_text.m_ascii.m_str = m_buffer_text.m_ascii.m_bos;
+                    m_buffer_text.m_ascii.m_end = m_buffer_text.m_ascii.m_eos;
                 }
             }
-
-            // Adjust our m_buffer_text
-            m_buffer_text.m_runes.m_ascii.m_bos = (ascii::pcrune)m_buffer_data;
-            m_buffer_text.m_runes.m_ascii.m_eos = (ascii::pcrune)m_buffer_data + m_buffer_size;
-            m_buffer_text.m_runes.m_ascii.m_str = m_buffer_text.m_runes.m_ascii.m_bos;
-            m_buffer_text.m_runes.m_ascii.m_end = m_buffer_text.m_runes.m_ascii.m_eos;
-
             if (!determineLine(line))
                 return false;
         }
@@ -98,73 +128,41 @@ namespace xcore
         return true;
     }
 
-    bool text_stream_t::vcanSeek() const
-    {
-        return false;
-    }
-
-    bool text_stream_t::vcanRead() const
-    {
-        return m_stream->canRead();
-    }
-
-    bool text_stream_t::vcanWrite() const
-    {
-        return m_stream->canWrite();
-    }
-
-    void text_stream_t::vflush()
-    {
-        m_stream->flush();
-    }
+    bool text_stream_t::vcanSeek() const { return false; }
+    bool text_stream_t::vcanRead() const { return m_stream->canRead(); }
+    bool text_stream_t::vcanWrite() const { return m_stream->canWrite(); }
+    bool text_stream_t::vcanZeroCopy() const { return m_stream->canZeroCopy(); }
+    void text_stream_t::vflush() { m_stream->flush(); }
 
     void text_stream_t::vclose()
     {
         if (m_buffer_data != nullptr)
         {
-            m_buffer_cap  = 0;
+            m_buffer_cap = 0;
             context_t::system_alloc()->deallocate(m_buffer_data);
             m_buffer_data = nullptr;
             m_buffer_size = 0;
-            m_stream_pos = 0;
-            m_stream_len = 0;
+            m_stream_pos  = 0;
+            m_stream_len  = 0;
             m_buffer_text = crunes_t();
         }
 
         m_stream->close();
     }
 
-    u64  text_stream_t::vgetLength() const
-    {
-        return m_stream->getLength();
-    }
+    u64  text_stream_t::vgetLength() const { return m_stream->getLength(); }
+    void text_stream_t::vsetLength(u64 length) { m_stream->setLength(length); }
 
-    void text_stream_t::vsetLength(u64 length)
-    {
-        m_stream->setLength(length);
-    }
-
-    s64  text_stream_t::vsetPos(s64 pos)
+    s64 text_stream_t::vsetPos(s64 pos)
     {
         if (canSeek())
             return m_stream->setPos(pos);
         return -1;
     }
 
-    s64  text_stream_t::vgetPos() const
-    {
-        return m_stream->getPos();
-    }
+    s64 text_stream_t::vgetPos() const { return m_stream->getPos(); }
+    s64 text_stream_t::vread(xbyte* buffer, s64 count) { return m_stream->read(buffer, count); }
+    s64 text_stream_t::vread0(xbyte const*& buffer, s64 count) { return m_stream->read0(buffer, count); }
+    s64 text_stream_t::vwrite(const xbyte* buffer, s64 count) { return m_stream->write(buffer, count); }
 
-    s64 text_stream_t::vread(xbyte* buffer, s64 count)
-    {
-        return m_stream->read(buffer, count);
-    }
-
-    s64 text_stream_t::vwrite(const xbyte* buffer, s64 count)
-    {
-        return m_stream->write(buffer, count);
-    }
-
-
-}
+} // namespace xcore

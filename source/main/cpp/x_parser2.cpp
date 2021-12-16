@@ -127,8 +127,8 @@ namespace xcore
                     crunes_t  r      = reader.get_current();
                     u16 const offset = (u16)writer.pos();
                     writer.write((u16)r.m_type);
-                    writer.write((uptr)r.m_runes.m_ascii.m_str);
-                    writer.write((uptr)r.m_runes.m_ascii.m_end);
+                    writer.write((uptr)r.m_ascii.m_str);
+                    writer.write((uptr)r.m_ascii.m_end);
                     return offset;
                 }
                 static s32     read_s32(binary_reader_t& reader) { return reader.read_s32(); }
@@ -147,10 +147,10 @@ namespace xcore
                 {
                     crunes_t str;
                     str.m_type                = (s32)reader.read_u16();
-                    str.m_runes.m_ascii.m_bos = (ascii::pcrune)reader.read_u64();
-                    str.m_runes.m_ascii.m_str = str.m_runes.m_ascii.m_bos;
-                    str.m_runes.m_ascii.m_eos = (ascii::pcrune)reader.read_u64();
-                    str.m_runes.m_ascii.m_end = str.m_runes.m_ascii.m_eos;
+                    str.m_ascii.m_bos = (ascii::pcrune)reader.read_u64();
+                    str.m_ascii.m_str = str.m_ascii.m_bos;
+                    str.m_ascii.m_eos = (ascii::pcrune)reader.read_u64();
+                    str.m_ascii.m_end = str.m_ascii.m_eos;
                     return str;
                 }
             };
@@ -213,7 +213,7 @@ namespace xcore
                 emit_pop_handle(o);
                 emit_instr(o);
                 operands_t::write(m_code, (u16)runes.m_type);
-                operands_t::write(m_code, (u64)runes.m_runes.m_ascii.m_str, (u64)runes.m_runes.m_ascii.m_end);
+                operands_t::write(m_code, (u64)runes.m_ascii.m_str, (u64)runes.m_ascii.m_end);
                 return *this;
             }
             machine_t& emit_instr(eOpcode o, va_r_t var)

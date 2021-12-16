@@ -10,6 +10,7 @@
 UNITTEST_SUITE_LIST(xTextTest);
 UNITTEST_SUITE_DECLARE(xTextTest, test_parser);
 UNITTEST_SUITE_DECLARE(xTextTest, test_parser2);
+UNITTEST_SUITE_DECLARE(xTextTest, test_text_stream);
 
 namespace xcore
 {
