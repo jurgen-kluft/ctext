@@ -52,21 +52,21 @@ namespace xcore
 
             bool And::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t c1 = _reader.get_cursor();
+                crunes_t::ptr_t start = _reader.get_cursor();
                 if (!m_tokenizer_a.Check(_reader))
                 {
-                    _reader.set_cursor(c1);
+                    _reader.set_cursor(start);
                     return false;
                 }
-                c1 = _reader.get_cursor();
+                crunes_t::ptr_t c1 = _reader.get_cursor();
 
-                crunes_t::ptr_t c2 = _reader.get_cursor();
+                _reader.set_cursor(start);
                 if (!m_tokenizer_b.Check(_reader))
                 {
-                    _reader.set_cursor(c2);
+                    _reader.set_cursor(start);
                     return false;
                 }
-                c2 = _reader.get_cursor();
+                crunes_t::ptr_t c2 = _reader.get_cursor();
 
                 crunes_t::ptr_t c = ((c2 < c1) ? c2 : c1);
                 _reader.set_cursor(c);
@@ -77,41 +77,32 @@ namespace xcore
             {
                 crunes_t::ptr_t start = _reader.get_cursor();
 
-                if (!m_tokenizer_a.Check(_reader))
+                if (m_tokenizer_a.Check(_reader))
                 {
-                    _reader.set_cursor(start);
-                    return false;
+                    if (m_tokenizer_b.Check(_reader))
+                    {
+                        return true;
+                    }
                 }
-
-                if (!m_tokenizer_b.Check(_reader))
-                {
-                    _reader.set_cursor(start);
-                    return false;
-                }
-
-                return true;
+                _reader.set_cursor(start);
+                return false;
             }
 
             bool Sequence3::Check(runes_reader_t& _reader)
             {
                 crunes_t::ptr_t start = _reader.get_cursor();
-                if (!m_tokenizer_a.Check(_reader))
+                if (m_tokenizer_a.Check(_reader))
                 {
-                    _reader.set_cursor(start);
-                    return false;
+                    if (m_tokenizer_b.Check(_reader))
+                    {
+                        if (m_tokenizer_c.Check(_reader))
+                        {
+                            return true;
+                        }
+                    }
                 }
-                if (!m_tokenizer_b.Check(_reader))
-                {
-                    _reader.set_cursor(start);
-                    return false;
-                }
-                if (!m_tokenizer_c.Check(_reader))
-                {
-                    _reader.set_cursor(start);
-                    return false;
-                }
-
-                return true;
+                _reader.set_cursor(start);
+                return false;
             }
 
             bool Within::Check(runes_reader_t& _reader)
@@ -174,11 +165,11 @@ namespace xcore
             {
                 filters::Exact open(m_open);
                 filters::Exact close(m_close);
-                Sequence        a(open, m_tokenizer_a);
-                Sequence        b(a, close);
+                Sequence       a(open, m_tokenizer_a);
+                Sequence       b(a, close);
                 return b.Check(_reader);
             }
-        } // namespace xmanipulators
+        } // namespace manipulators
 
         namespace filters
         {
@@ -197,8 +188,7 @@ namespace xcore
 
                 m_input.reset();
 
-                crunes_t::ptr_t inputcursor = m_input.get_cursor();
-                uchar32 const   s           = _reader.peek();
+                uchar32 const s = _reader.peek();
                 while (m_input.valid())
                 {
                     uchar32 const c = m_input.read();
@@ -214,7 +204,7 @@ namespace xcore
             bool Between::Check(runes_reader_t& _reader)
             {
                 uchar32 c = _reader.peek();
-                if (c >= m_lower && c < m_upper)
+                if (c >= m_lower && c <= m_upper)
                 {
                     _reader.skip();
                     return true;
@@ -222,7 +212,7 @@ namespace xcore
                 return false;
             }
 
-            bool Alphabet::Check(runes_reader_t& _reader) { return (m_lower_case.Check(_reader) | m_upper_case.Check(_reader)); }
+            bool Alphabet::Check(runes_reader_t& _reader) { return (m_lower_case.Check(_reader) || m_upper_case.Check(_reader)); }
             bool Digit::Check(runes_reader_t& _reader) { return m_digit.Check(_reader); }
             bool Hex::Check(runes_reader_t& _reader)
             {
@@ -247,19 +237,18 @@ namespace xcore
 
             bool Exact::Check(runes_reader_t& _reader)
             {
-				m_input.reset();
+                m_input.reset();
 
-                crunes_t::ptr_t rcursor = _reader.get_cursor();
-                crunes_t::ptr_t icursor = m_input.get_cursor();
+                crunes_t::ptr_t start = _reader.get_cursor();
                 while (m_input.valid())
                 {
                     uchar32 a = _reader.peek();
                     uchar32 b = m_input.peek();
-					if (a != b)
-					{
-						_reader.set_cursor(rcursor);
-						return false;
-					}
+                    if (a != b)
+                    {
+                        _reader.set_cursor(start);
+                        return false;
+                    }
                     m_input.skip();
                     _reader.skip();
                 }
@@ -268,23 +257,22 @@ namespace xcore
 
             bool Like::Check(runes_reader_t& _reader)
             {
-				m_input.reset();
-				
-				crunes_t::ptr_t rcursor = _reader.get_cursor();
-                crunes_t::ptr_t icursor = m_input.get_cursor();
+                m_input.reset();
+
+                crunes_t::ptr_t start = _reader.get_cursor();
                 while (m_input.valid())
                 {
                     uchar32 a = _reader.peek();
                     uchar32 b = m_input.peek();
-					if (a != b && (to_lower(a) != to_lower(b)))
-					{
-						_reader.set_cursor(rcursor);
-						return false;
-					}
+                    if (a != b && (to_lower(a) != to_lower(b)))
+                    {
+                        _reader.set_cursor(start);
+                        return false;
+                    }
                     m_input.skip();
                     _reader.skip();
                 }
-				return true;
+                return true;
             }
 
             bool WhiteSpace::Check(runes_reader_t& _reader) { return m_whitespace.Check(_reader); }
@@ -312,7 +300,7 @@ namespace xcore
             bool Integer::Check(runes_reader_t& _reader)
             {
                 s64             value       = 0;
-                crunes_t::ptr_t start      = _reader.get_cursor();
+                crunes_t::ptr_t start       = _reader.get_cursor();
                 uchar32         c           = _reader.peek();
                 bool            is_negative = (c == '-');
                 if (is_negative)
@@ -333,14 +321,14 @@ namespace xcore
                 {
                     return true;
                 }
-				_reader.set_cursor(start);
+                _reader.set_cursor(start);
                 return false;
             }
 
             bool Float::Check(runes_reader_t& _reader)
             {
                 f32             value       = 0.0f;
-                crunes_t::ptr_t start      = _reader.get_cursor();
+                crunes_t::ptr_t start       = _reader.get_cursor();
                 uchar32         c           = _reader.peek();
                 bool            is_negative = c == '-';
                 if (is_negative)
@@ -373,8 +361,8 @@ namespace xcore
                 {
                     return true;
                 }
-				_reader.set_cursor(start);
-				return false;
+                _reader.set_cursor(start);
+                return false;
             }
         } // namespace filters
 
@@ -412,7 +400,7 @@ namespace xcore
                 Or         valid(sAlphaNumeric, validchars);
                 OneOrMore  oom_valid(valid);
                 Is         dot('.');
-                Sequence   dot_valid(dot, valid);
+                Sequence   dot_valid(dot, oom_valid);
                 ZeroOrMore zom_dot_valid(dot_valid);
                 Is         mt('@');
                 Sequence   a(oom_valid, zom_dot_valid);
@@ -426,6 +414,6 @@ namespace xcore
             bool Uri::Check(runes_reader_t& _reader) { return false; }
 
         } // namespace utils
-    }     // namespace parser
+    }     // namespace combparser
 
 } // namespace xcore

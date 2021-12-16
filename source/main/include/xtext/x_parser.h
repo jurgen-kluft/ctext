@@ -258,7 +258,7 @@ namespace xcore
             class Between : public tokenizer_t
             {
                 uchar32 m_lower;
-                uchar32 m_upper;
+                uchar32 m_upper;    // upper is inclusive
 
             public:
                 Between()
@@ -392,7 +392,7 @@ namespace xcore
                     : m_char(' ')
                 {
                 }
-                Is(uchar c)
+                Is(uchar32 c)
                     : m_char(c)
                 {
                 }
