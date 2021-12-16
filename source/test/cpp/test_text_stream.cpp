@@ -94,8 +94,8 @@ UNITTEST_SUITE_BEGIN(test_text_stream)
                 CHECK_TRUE(starts_with(line, thisstr));
             }
 
-			text.close();
-			memtext.close();
+            text.close();
+            memtext.close();
         }
     }
 }
