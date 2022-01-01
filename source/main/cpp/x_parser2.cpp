@@ -10,59 +10,60 @@ namespace xcore
 {
     namespace xparser2
     {
+        enum eOpcode
+        {
+            eNOP = 0,
+            // Manipulators (scope)
+            eNot,
+            eOr,
+            eAnd,
+            eSequence,
+            eWithin,
+            eTimes,
+            eOneOrMore,
+            eZeroOrMore,
+            eZeroOrOne,
+            eWhile,
+            eUntil,
+            eExtract,
+            eEnclosed,
+            // Filters
+            eAny = 0x80,
+            eDigest,
+            eIn,
+            eBetween,
+            eAlphabet,
+            eDigit,
+            eHex,
+            eAlphaNumeric,
+            eExact,
+            eLike,
+            eWhiteSpace,
+            eIs,
+            eDecimal,
+            eWord,
+            eEndOfText,
+            eEndOfLine,
+            eUnsigned32,
+            eUnsigned64,
+            eInteger32,
+            eInteger64,
+            eFloat32,
+            eFloat64,
+            // Utils
+            eIPv4 = 0x40,
+            eHost,
+            eEmail,
+            ePhone,
+            eServerAddress,
+            eUri
+        };        
+
         class machine_t
         {
         public:
-            enum eOpcode
-            {
-                eNOP = 0,
-                // Manipulators (scope)
-                ePop = 0xC0,
-                eNot,
-                eOr,
-                eAnd,
-                eSequence,
-                eWithin,
-                eTimes,
-                eOneOrMore,
-                eZeroOrMore,
-                eZeroOrOne,
-                eWhile,
-                eUntil,
-                eExtract,
-                eEnclosed,
-                // Filters
-                eAny = 0x80,
-                eIn,
-                eBetween,
-                eAlphabet,
-                eDigit,
-                eHex,
-                eAlphaNumeric,
-                eExact,
-                eLike,
-                eWhiteSpace,
-                eIs,
-                eDecimal,
-                eWord,
-                eEndOfText,
-                eEndOfLine,
-                eUnsigned32,
-                eUnsigned64,
-                eInteger32,
-                eInteger64,
-                eFloat32,
-                eFloat64,
-                // Utils
-                eIPv4 = 0x40,
-                eHost,
-                eEmail,
-                ePhone,
-                eServerAddress,
-                eUri
-            };
+            machine_t() : m_code(), m_program() {}
 
-        private:
             struct operands_t
             {
                 static u16 write(binary_writer_t& writer, u16 opa) { return (u16)writer.write(opa); }
@@ -133,6 +134,7 @@ namespace xcore
                 }
                 static s32     read_s32(binary_reader_t& reader) { return reader.read_s32(); }
                 static s64     read_s64(binary_reader_t& reader) { return reader.read_s64(); }
+                static u8      read_u8(binary_reader_t& reader) { return reader.read_u8(); }
                 static u32     read_u32(binary_reader_t& reader) { return reader.read_u32(); }
                 static uchar32 read_uchar32(binary_reader_t& reader) { return (uchar32)reader.read_u32(); }
                 static u64     read_u64(binary_reader_t& reader) { return reader.read_u64(); }
@@ -157,143 +159,90 @@ namespace xcore
 
             runes_writer_t* get_writer(u32 channel) { return nullptr; }
 
-            s32             m_pc;
             binary_writer_t m_code;
             binary_reader_t m_program;
-            u16*            m_stack;
-            s32             m_stack_size;
-            s32             m_stack_max;
 
             struct context_t
             {
                 context_t(runes_reader_t const& _reader) : reader(_reader) {}
-
                 crunes_t::ptr_t get_cursor() const { return reader.get_cursor(); }
                 void            set_cursor(crunes_t::ptr_t const& c) { reader.set_cursor(c); }
-
                 runes_reader_t reader;
             };
+            typedef parser_t::pc_t pc_t;
 
-            void emit_pop_handle(eOpcode o)
+            inline void emit_instr(eOpcode o)
             {
-                if (o == ePop)
-                {
-                    u16 const       pc           = m_stack[--m_stack_size];
-                    binary_writer_t write_poploc = m_code.range(pc, pc + sizeof(u16));
-                    write_poploc.write((u16)m_code.pos());
-                }
-                else if ((o & ePop) == ePop)
-                {
-                    m_stack[m_stack_size++] = m_code.pos() + 2;
-                }
-            }
-            machine_t& emit_instr(eOpcode o)
-            {
-                emit_pop_handle(o);
                 m_code.write((u16)o);
-                if ((o & ePop) == ePop)
-                    m_code.write((u16)0);
-                return *this;
             }
-            template <typename T> machine_t& emit_instr(eOpcode o, T _a)
+            template <typename T> void emit_instr(eOpcode o, T _a)
             {
                 emit_instr(o);
                 operands_t::write(m_code, _a);
-                return *this;
             }
-            template <typename T1, typename T2> machine_t& emit_instr(eOpcode o, T1 _a, T2 _b)
+            template <typename T1, typename T2> void emit_instr(eOpcode o, T1 _a, T2 _b)
             {
-                emit_pop_handle(o);
                 emit_instr(o);
                 operands_t::write(m_code, _a, _b);
-                return *this;
             }
-            machine_t& emit_instr(eOpcode o, crunes_t const& runes)
+            void emit_instr(eOpcode o, crunes_t const& runes)
             {
-                emit_pop_handle(o);
                 emit_instr(o);
                 operands_t::write(m_code, (u16)runes.m_type);
                 operands_t::write(m_code, (u64)runes.m_ascii.m_str, (u64)runes.m_ascii.m_end);
-                return *this;
             }
-            machine_t& emit_instr(eOpcode o, va_r_t var)
+            void emit_instr(eOpcode o, va_r_t var)
             {
-                emit_pop_handle(o);
                 emit_instr(o);
                 operands_t::write(m_code, (u16)var.mType);
                 operands_t::write(m_code, (u64)var.mRef[0]);
-                return *this;
+            }
+            void emit_call(pc_t pc1)
+            {
+                m_code.write(pc1);
+            }
+            void emit_calls(pc_t pc1)
+            {
+                m_code.write((u16)1);
+                m_code.write(pc1);
+            }
+            void emit_calls(pc_t pc1, pc_t pc2)
+            {
+                m_code.write((u16)2);
+                m_code.write(pc1);
+                m_code.write(pc2);
+            }
+            void emit_calls(pc_t pc1, pc_t pc2, pc_t pc3)
+            {
+                m_code.write((u16)3);
+                m_code.write(pc1);
+                m_code.write(pc2);
+                m_code.write(pc3);
+            }
+            void emit_calls(pc_t pc1, pc_t pc2, pc_t pc3, pc_t pc4)
+            {
+                m_code.write((u16)4);
+                m_code.write(pc1);
+                m_code.write(pc2);
+                m_code.write(pc3);
+                m_code.write(pc4);
             }
 
-        public:
-            machine_t() : m_code(), m_program(), m_stack(nullptr), m_stack_size(0), m_stack_max(0) {}
-            void initialize(buffer_t buffer)
+            inline pc_t pc() const { return (pc_t)m_program.pos(); }
+
+            inline pc_t exec_jmp()
             {
-                // Give some memory to code-block and stack
-                u32 const buffersize   = buffer.size();
-                buffer_t  code_buffer  = buffer(0, (buffersize * 8) / 10);          // 80 %
-                buffer_t  stack_buffer = buffer(code_buffer.size(), buffer.size()); // 20 %
-                m_code                 = code_buffer;
-                m_stack                = (u16*)stack_buffer.data();
-                m_stack_max            = stack_buffer.size() / sizeof(u16);
-                m_stack_size           = 0;
+                pc_t const pos = (pc_t)m_program.pos();
+                pc_t const pc = (pc_t)m_program.read_u16();
+                m_program.seek(pc);
+                return pos;
             }
 
-            bool execute(runes_reader_t const& reader, crunes_t::ptr_t& cursor)
+            inline void skip_jmp()
             {
-                context_t ctxt(reader);
-                ctxt.reader.set_cursor(cursor);
-                buffer_t code = m_code.get_current_buffer();
-                m_program     = binary_reader_t(code);
-                return fnExec(ctxt);
+                // skip a call entry
+                m_program.read_u16();
             }
-
-            machine_t& Pop()
-            {
-                emit_pop_handle(ePop);
-                return *this;
-            }
-            machine_t& Not() { return emit_instr(eNot); }
-            machine_t& Or() { return emit_instr(eOr); }
-            machine_t& And() { return emit_instr(eAnd); }
-            machine_t& Sequence() { return emit_instr(eSequence); }
-            machine_t& Within(s32 _min = 0, s32 _max = 0x7fffffff) { return emit_instr(eWithin, _min, _max); }
-            machine_t& Times(s32 _count) { return emit_instr(eTimes, _count); }
-            machine_t& OneOrMore() { return emit_instr(eOneOrMore); }
-            machine_t& ZeroOrMore() { return emit_instr(eZeroOrMore); }
-            machine_t& ZeroOrOne() { return emit_instr(eZeroOrOne); }
-            machine_t& While() { return emit_instr(eWhile); }
-            machine_t& Until() { return emit_instr(eUntil); }
-            machine_t& Extract(va_r_t* var) { return emit_instr(eExtract, var); }
-            machine_t& Enclosed(uchar32 _open, uchar32 _close) { return emit_instr(eEnclosed, (u32)_open, (u32)_close); }
-            machine_t& Any() { return emit_instr(eAny); }
-            machine_t& In(crunes_t const& _chars) { return emit_instr(eIn, _chars); }
-            machine_t& Between(uchar32 _from, uchar32 _until) { return emit_instr(eBetween, (u32)_from, (u32)_until); }
-            machine_t& Alphabet() { return emit_instr(eAlphabet); }
-            machine_t& Digit() { return emit_instr(eDigit); }
-            machine_t& Hex() { return emit_instr(eHex); }
-            machine_t& AlphaNumeric() { return emit_instr(eAlphaNumeric); }
-            machine_t& Exact(crunes_t const& _text) { return emit_instr(eExact, _text); }
-            machine_t& Like(crunes_t const& _text) { return emit_instr(eLike, _text); }
-            machine_t& WhiteSpace() { return emit_instr(eWhiteSpace); }
-            machine_t& Is(uchar32 _c) { return emit_instr(eIs, _c); }
-            machine_t& Word() { return emit_instr(eWord); }
-            machine_t& EndOfText() { return emit_instr(eEndOfText); }
-            machine_t& EndOfLine() { return emit_instr(eEndOfLine); }
-            machine_t& Unsigned32(u32 _min = 0, u32 _max = 0xffffffff) { return emit_instr(eUnsigned32, _min, _max); }
-            machine_t& Unsigned64(u64 _min = 0, u64 _max = 0xffffffffffffffffUL) { return emit_instr(eUnsigned64, _min, _max); }
-            machine_t& Integer32(s32 _min = 0, s32 _max = 0x7fffffff) { return emit_instr(eInteger32, _min, _max); }
-            machine_t& Integer64(s64 _min = 0, s64 _max = 0x7fffffffffffffffL) { return emit_instr(eInteger64, _min, _max); }
-            machine_t& Float32(f32 _min = 0.0f, f32 _max = 3.402823e+38f) { return emit_instr(eFloat32, _min, _max); }
-            machine_t& Float64(f64 _min = 0.0, f64 _max = 3.402823e+38f) { return emit_instr(eFloat64, _min, _max); }
-            machine_t& Email();
-            machine_t& IPv4();
-            machine_t& Host();
-            machine_t& Date() { return *this; }
-            machine_t& Time() { return *this; }
-            machine_t& Phone() { return *this; }
-            machine_t& ServerAddress() { return *this; }
-            machine_t& URI() { return *this; }
 
             bool fnOpcodeIs(eOpcode) const;
             bool fnExec(context_t& ctxt);
@@ -310,7 +259,9 @@ namespace xcore
             bool fnUntil(context_t& ctxt);
             bool fnExtract(context_t& ctxt, va_r_t* var);
             bool fnEnclosed(context_t& ctxt, uchar32 _open, uchar32 _close);
+
             bool fnAny(context_t& ctxt);
+            bool fnDigest(context_t& ctxt, u8 flags);
             bool fnIn(context_t& ctxt, runes_reader_t _chars);
             bool fnBetween(context_t& ctxt, uchar32 _from, uchar32 _until);
             bool fnAlphabet(context_t& ctxt);
@@ -330,111 +281,182 @@ namespace xcore
             bool fnInteger64(context_t& ctxt, s64 _min, s64 _max);
             bool fnFloat32(context_t& ctxt, f32 _min, f32 _max);
             bool fnFloat64(context_t& ctxt, f64 _min, f64 _max);
-            bool fnDecimal(context_t& ctxt);
+            bool fnDecimal(context_t& ctxt);            
+
+            parser_t::program_t initialize(buffer_t buffer)
+            {
+                m_code = buffer;
+                return parser_t::program_t(this, 0);
+            }
+
+            bool execute(parser_t::program_t const& prog, runes_reader_t const& reader, crunes_t::ptr_t& cursor)
+            {
+                context_t ctxt(reader);
+                ctxt.reader.set_cursor(cursor);
+                buffer_t code = m_code.get_current_buffer();
+                m_program     = binary_reader_t(code);
+                m_program.seek(prog.pc());
+                if (fnExec(ctxt))
+                {
+                    cursor = ctxt.get_cursor();
+                    return true;
+                }
+                return false;
+            }
+
 
             XCORE_CLASS_PLACEMENT_NEW_DELETE
         };
 
-        machine_t& machine_t::Email()
+        parser_t::program_t::program_t(machine_t* m) : m_machine(m) { m_pc = m->pc(); }
+        parser_t::program_t::program_t(machine_t* m, pc_t pc) : m_machine(m), m_pc(pc) {}
+        parser_t::program_t::program_t(const program_t& p) : m_machine(p.m_machine), m_pc(p.m_pc) {}
+
+        parser_t::program_t parser_t::program_t::Program(program_t p) { program_t pc(*this); m_machine->emit_call(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::Not(program_t p) { program_t pc(*this); m_machine->emit_instr(eNot); m_machine->emit_calls(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::Or(program_t lhs, program_t rhs) { program_t pc(*this); m_machine->emit_instr(eOr); m_machine->emit_calls(lhs.pc(), rhs.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::And(program_t lhs, program_t rhs) { program_t pc(*this); m_machine->emit_instr(eAnd); m_machine->emit_calls(lhs.pc(), rhs.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::Sequence(program_t p1, program_t p2) { program_t pc(*this); m_machine->emit_instr(eSequence); m_machine->emit_calls(p1.pc(),p2.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::Within(program_t p, s32 _min, s32 _max) { program_t pc(*this); m_machine->emit_instr(eWithin, _min, _max); m_machine->emit_calls(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::Times(program_t p, s32 _count) { program_t pc(*this); m_machine->emit_instr(eTimes, _count); m_machine->emit_calls(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::OneOrMore(program_t p) { program_t pc(*this); m_machine->emit_instr(eOneOrMore); m_machine->emit_calls(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::ZeroOrMore(program_t p) { program_t pc(*this); m_machine->emit_instr(eZeroOrMore); m_machine->emit_calls(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::ZeroOrOne(program_t p) { program_t pc(*this); m_machine->emit_instr(eZeroOrOne); m_machine->emit_calls(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::While(program_t p) { program_t pc(*this); m_machine->emit_instr(eWhile); m_machine->emit_calls(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::Until(program_t p) { program_t pc(*this); m_machine->emit_instr(eUntil); m_machine->emit_calls(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::Extract(va_r_t* var, program_t p) { program_t pc(*this); m_machine->emit_instr(eExtract, var); m_machine->emit_calls(p.pc()); return pc; }
+        parser_t::program_t parser_t::program_t::Enclosed(uchar32 _open, uchar32 _close, program_t p) { program_t pc(*this); m_machine->emit_instr(eEnclosed, (u32)_open, (u32)_close); m_machine->emit_calls(p.pc()); return pc; }
+
+        parser_t::program_t parser_t::program_t::Any() { program_t pc(*this); m_machine->emit_instr(eAny); return pc; }
+        parser_t::program_t parser_t::program_t::Digest(u8 flags) { program_t pc(*this); m_machine->emit_instr(eDigest, flags); return pc; }
+        parser_t::program_t parser_t::program_t::In(crunes_t const& _chars) { program_t pc(*this); m_machine->emit_instr(eIn, _chars); return pc; }
+        parser_t::program_t parser_t::program_t::Between(uchar32 _from, uchar32 _until) { program_t pc(*this); m_machine->emit_instr(eBetween, (u32)_from, (u32)_until); return pc; }
+        parser_t::program_t parser_t::program_t::Alphabet() { program_t pc(*this); m_machine->emit_instr(eAlphabet); return pc; }
+        parser_t::program_t parser_t::program_t::Digit() { program_t pc(*this); m_machine->emit_instr(eDigit); return pc; }
+        parser_t::program_t parser_t::program_t::Hex() { program_t pc(*this); m_machine->emit_instr(eHex); return pc; }
+        parser_t::program_t parser_t::program_t::AlphaNumeric() { program_t pc(*this); m_machine->emit_instr(eAlphaNumeric); return pc; }
+        parser_t::program_t parser_t::program_t::Exact(crunes_t const& _text) { program_t pc(*this); m_machine->emit_instr(eExact, _text); return pc; }
+        parser_t::program_t parser_t::program_t::Like(crunes_t const& _text) { program_t pc(*this); m_machine->emit_instr(eLike, _text); return pc; }
+        parser_t::program_t parser_t::program_t::WhiteSpace() { program_t pc(*this); m_machine->emit_instr(eWhiteSpace); return pc; }
+        parser_t::program_t parser_t::program_t::Is(uchar32 _c) { program_t pc(*this); m_machine->emit_instr(eIs, _c); return pc; }
+        parser_t::program_t parser_t::program_t::Word() { program_t pc(*this); m_machine->emit_instr(eWord); return pc; }
+        parser_t::program_t parser_t::program_t::EndOfText() { program_t pc(*this); m_machine->emit_instr(eEndOfText); return pc; }
+        parser_t::program_t parser_t::program_t::EndOfLine() { program_t pc(*this); m_machine->emit_instr(eEndOfLine); return pc; }
+        parser_t::program_t parser_t::program_t::Unsigned32(u32 _min, u32 _max) { program_t pc(*this); m_machine->emit_instr(eUnsigned32, _min, _max); return pc; }
+        parser_t::program_t parser_t::program_t::Unsigned64(u64 _min, u64 _max) { program_t pc(*this); m_machine->emit_instr(eUnsigned64, _min, _max); return pc; }
+        parser_t::program_t parser_t::program_t::Integer32(s32 _min, s32 _max) { program_t pc(*this); m_machine->emit_instr(eInteger32, _min, _max); return pc; }
+        parser_t::program_t parser_t::program_t::Integer64(s64 _min, s64 _max) { program_t pc(*this); m_machine->emit_instr(eInteger64, _min, _max); return pc; }
+        parser_t::program_t parser_t::program_t::Float32(f32 _min, f32 _max) { program_t pc(*this); m_machine->emit_instr(eFloat32, _min, _max); return pc; }
+        parser_t::program_t parser_t::program_t::Float64(f64 _min, f64 _max) { program_t pc(*this); m_machine->emit_instr(eFloat64, _min, _max); return pc; }
+
+        parser_t::program_t parser_t::Program(program_t p) { program_t prog(m_machine); m_machine->emit_call(p.pc()); return prog; }
+        parser_t::program_t parser_t::Not(program_t p) { program_t prog(m_machine); m_machine->emit_instr(eNot); m_machine->emit_calls(p.pc()); return prog; }
+        parser_t::program_t parser_t::Or(program_t lhs, program_t rhs) { program_t prog(m_machine); m_machine->emit_instr(eOr); m_machine->emit_calls(lhs.pc(), rhs.pc()); return prog; }
+        parser_t::program_t parser_t::And(program_t lhs, program_t rhs) { program_t prog(m_machine); m_machine->emit_instr(eAnd); m_machine->emit_calls(lhs.pc(), rhs.pc()); return prog; }
+        parser_t::program_t parser_t::Sequence(program_t p1, program_t p2) { program_t prog(m_machine); m_machine->emit_instr(eSequence); m_machine->emit_calls(p1.pc(),p2.pc()); return prog; }
+        parser_t::program_t parser_t::Sequence(program_t p1, program_t p2, program_t p3) { program_t prog(m_machine); m_machine->emit_instr(eSequence); m_machine->emit_calls(p1.pc(),p2.pc(),p3.pc()); return prog; }
+        parser_t::program_t parser_t::Sequence(program_t p1, program_t p2, program_t p3, program_t p4) { program_t prog(m_machine); m_machine->emit_instr(eSequence); m_machine->emit_calls(p1.pc(),p2.pc(),p3.pc(),p4.pc()); return prog; }
+        parser_t::program_t parser_t::Within(program_t p, s32 _min, s32 _max) { program_t prog(m_machine); m_machine->emit_instr(eWithin, _min, _max); m_machine->emit_calls(p.pc()); return prog; }
+        parser_t::program_t parser_t::Times(s32 _count, program_t p) { program_t prog(m_machine); m_machine->emit_instr(eTimes, _count); m_machine->emit_calls(p.pc()); return prog; }
+        parser_t::program_t parser_t::OneOrMore(program_t p) { program_t prog(m_machine); m_machine->emit_instr(eOneOrMore); m_machine->emit_calls(p.pc()); return prog; }
+        parser_t::program_t parser_t::ZeroOrMore(program_t p) { program_t prog(m_machine); m_machine->emit_instr(eZeroOrMore); m_machine->emit_calls(p.pc()); return prog; }
+        parser_t::program_t parser_t::ZeroOrOne(program_t p) { program_t prog(m_machine); m_machine->emit_instr(eZeroOrOne); m_machine->emit_calls(p.pc()); return prog; }
+        parser_t::program_t parser_t::While(program_t p) { program_t prog(m_machine); m_machine->emit_instr(eWhile); m_machine->emit_calls(p.pc()); return prog; }
+        parser_t::program_t parser_t::Until(program_t p) { program_t prog(m_machine); m_machine->emit_instr(eUntil); m_machine->emit_calls(p.pc()); return prog; }
+        parser_t::program_t parser_t::Extract(va_r_t* var, program_t p) { program_t prog(m_machine); m_machine->emit_instr(eExtract, var); m_machine->emit_calls(p.pc()); return prog; }
+        parser_t::program_t parser_t::Enclosed(uchar32 _open, uchar32 _close, program_t p) { program_t prog(m_machine); m_machine->emit_instr(eEnclosed, (u32)_open, (u32)_close); m_machine->emit_calls(p.pc()); return prog; }
+
+        parser_t::program_t parser_t::Any() { program_t prog(m_machine); m_machine->emit_instr(eAny); return prog; }
+        parser_t::program_t parser_t::Digest(u8 flags) { program_t prog(m_machine); m_machine->emit_instr(eDigest, flags); return prog; }
+        parser_t::program_t parser_t::In(crunes_t const& _chars) { program_t prog(m_machine); m_machine->emit_instr(eIn, _chars); return prog; }
+        parser_t::program_t parser_t::Between(uchar32 _from, uchar32 _until) { program_t prog(m_machine); m_machine->emit_instr(eBetween, (u32)_from, (u32)_until); return prog; }
+        parser_t::program_t parser_t::Alphabet() { program_t prog(m_machine); m_machine->emit_instr(eAlphabet); return prog; }
+        parser_t::program_t parser_t::Digit() { program_t prog(m_machine); m_machine->emit_instr(eDigit); return prog; }
+        parser_t::program_t parser_t::Hex() { program_t prog(m_machine); m_machine->emit_instr(eHex); return prog; }
+        parser_t::program_t parser_t::AlphaNumeric() { program_t prog(m_machine); m_machine->emit_instr(eAlphaNumeric); return prog; }
+        parser_t::program_t parser_t::Exact(crunes_t const& _text) { program_t prog(m_machine); m_machine->emit_instr(eExact, _text); return prog; }
+        parser_t::program_t parser_t::Like(crunes_t const& _text) { program_t prog(m_machine); m_machine->emit_instr(eLike, _text); return prog; }
+        parser_t::program_t parser_t::WhiteSpace() { program_t prog(m_machine); m_machine->emit_instr(eWhiteSpace); return prog; }
+        parser_t::program_t parser_t::Is(uchar32 _c) { program_t prog(m_machine); m_machine->emit_instr(eIs, _c); return prog; }
+        parser_t::program_t parser_t::Word() { program_t prog(m_machine); m_machine->emit_instr(eWord); return prog; }
+        parser_t::program_t parser_t::EndOfText() { program_t prog(m_machine); m_machine->emit_instr(eEndOfText); return prog; }
+        parser_t::program_t parser_t::EndOfLine() { program_t prog(m_machine); m_machine->emit_instr(eEndOfLine); return prog; }
+        parser_t::program_t parser_t::Unsigned32(u32 _min, u32 _max) { program_t prog(m_machine); m_machine->emit_instr(eUnsigned32, _min, _max); return prog; }
+        parser_t::program_t parser_t::Unsigned64(u64 _min, u64 _max) { program_t prog(m_machine); m_machine->emit_instr(eUnsigned64, _min, _max); return prog; }
+        parser_t::program_t parser_t::Integer32(s32 _min, s32 _max) { program_t prog(m_machine); m_machine->emit_instr(eInteger32, _min, _max); return prog; }
+        parser_t::program_t parser_t::Integer64(s64 _min, s64 _max) { program_t prog(m_machine); m_machine->emit_instr(eInteger64, _min, _max); return prog; }
+        parser_t::program_t parser_t::Float32(f32 _min, f32 _max) { program_t prog(m_machine); m_machine->emit_instr(eFloat32, _min, _max); return prog; }
+        parser_t::program_t parser_t::Float64(f64 _min, f64 _max) { program_t prog(m_machine); m_machine->emit_instr(eFloat64, _min, _max); return prog; }
+
+
+        parser_t::program_t parser_t::Email()
         {
             crunes_t validchars((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 19);
-            // clang-format off
-            Sequence();
-                OneOrMore();
-                    Or();
-                        AlphaNumeric();
-                        In(validchars);
-                    Pop();
-                Pop();
-                ZeroOrMore();
-                    Or();
-                        Is('.');
-                        Is('_');
-                    Pop();
-                    Or();
-                        AlphaNumeric();
-                        In(validchars);
-                    Pop();
-                Pop();
-                Is('@');
-                Host();
-            Pop();
-            // clang-format on
-            return *this;
+
+            program_t email_program = Sequence(
+                OneOrMore(Or(AlphaNumeric(), In(validchars))),
+                ZeroOrMore(
+                    Sequence(
+                        Or(Is('.'), Is('_')), 
+                        Or(AlphaNumeric(), In(validchars))
+                    )
+                ),
+                Is('@'),
+                Host()
+            );
+            return email_program;
         }
 
-        machine_t& machine_t::IPv4()
+        parser_t::program_t parser_t::IPv4()
         {
             // clang-format off
-            Sequence();
-                Times(3);
-                    And();
-                        Within(1,3);
-                            Digit();
-                        Pop();
-                        Unsigned32(0, 255);
-                    Pop();
-                    Is('.');
-                Pop();
-                And();
-                    Within(1,3);
-                        Digit();
-                    Pop();
-                    Unsigned32(0, 255);
-                Pop();
-            Pop();
+            program_t program = Sequence(
+                Times(3, 
+                    Sequence( 
+                        And( 
+                            Within(Digit(), 1,3), Unsigned32(0, 255)
+                        ), 
+                        Is('.') 
+                    ) 
+                ),
+                And( 
+                    Within(Digit(), 1,3), Unsigned32(0, 255) 
+                )
+            );
             // clang-format on
-            return *this;
+
+            return program;
         }
 
-        machine_t& machine_t::Host()
+        parser_t::program_t parser_t::Host()
         {
             // clang-format off
-            Or();
-                IPv4();
-                Sequence();
-                    OneOrMore();
-                        AlphaNumeric();
-                    Pop();
-                    ZeroOrMore();
-                        Is('-');
-                        OneOrMore();
-                            AlphaNumeric();
-                        Pop();
-                    Pop();
-                    ZeroOrMore();
-                        Is('.');
-                        OneOrMore();
-                            AlphaNumeric();
-                        Pop();
-                        ZeroOrMore();
-                            Is('-');
-                            OneOrMore();
-                                AlphaNumeric();
-                            Pop();
-                        Pop();
-                    Pop();
-                Pop();
-            Pop();
+            program_t program = Or(
+                IPv4(),
+                Sequence(
+                    OneOrMore(AlphaNumeric()),
+                    ZeroOrMore(Sequence(Is('-'), OneOrMore(AlphaNumeric()))),
+                    ZeroOrMore(Sequence(
+                        Sequence(Is('.'), OneOrMore(AlphaNumeric())),
+                        ZeroOrMore(Sequence(Is('-'), OneOrMore(AlphaNumeric())))
+                               )
+                    )
+                )
+            );
             // clang-format on
-            return *this;
+
+            return program;
         }
 
         bool machine_t::fnExec(context_t& ctxt)
         {
-            //@NOTE: When a fn that requires a Pop returns false we need to jump over any existing opcodes to arrive
-            //       at the Pop opcode.
-
             bool    result = true;
-            u32     jmp    = 0;
-            eOpcode o      = (eOpcode)m_program.read_u16();
-            if ((o & ePop) == ePop)
-            {
-                jmp = m_program.read_u16();
-            }
+            
+            u16 const pc = exec_jmp();
+
+            eOpcode const o = (eOpcode)m_program.read_u8();
             switch (o)
             {
-                case ePop:
                 case eNOP: break;
 
                 case eIPv4: // TODO
@@ -457,7 +479,9 @@ namespace xcore
                 case eUntil: result = fnUntil(ctxt); break;
                 case eExtract: result = fnExtract(ctxt, operands_t::read_var(m_program)); break;
                 case eEnclosed: result = fnEnclosed(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program)); break;
+
                 case eAny: result = fnAny(ctxt); break;
+                case eDigest: result = fnDigest(ctxt, operands_t::read_u8(m_program)); break;
                 case eIn: result = fnIn(ctxt, operands_t::read_crunes(m_program)); break;
                 case eBetween: result = fnBetween(ctxt, operands_t::read_uchar32(m_program), operands_t::read_uchar32(m_program)); break;
                 case eAlphabet: result = fnAlphabet(ctxt); break;
@@ -480,11 +504,7 @@ namespace xcore
                 case eFloat64: result = fnFloat64(ctxt, operands_t::read_f64(m_program), operands_t::read_f64(m_program)); break;
             }
 
-            if ((o & ePop) == ePop)
-            {
-                m_program.seek(jmp);
-            }
-
+            m_program.seek(pc);
             return result;
         }
 
@@ -494,31 +514,50 @@ namespace xcore
             return opcode == o;
         }
 
-        bool machine_t::fnNot(context_t& ctxt) { return !(fnExec(ctxt)); }
+        bool machine_t::fnNot(context_t& ctxt) 
+        { 
+            return fnExec(ctxt);
+        }
 
         bool machine_t::fnOr(context_t& ctxt)
         {
-            while (!fnOpcodeIs(machine_t::ePop))
+            crunes_t::ptr_t const cursor = ctxt.get_cursor();
+
+            u16 n = m_program.read_u16(); // number of OR operands
+            while (n != 0)
             {
-                if (!fnExec(ctxt))
-                    return false;
+                ctxt.set_cursor(cursor);
+
+                if (fnExec(ctxt))
+                    return true;
+                skip_jmp();
+
+                n--;
             }
-            return true;
+            ctxt.set_cursor(cursor);
+            return false;
         }
 
         bool machine_t::fnAnd(context_t& ctxt)
         {
             crunes_t::ptr_t const cursor = ctxt.get_cursor();
             crunes_t::ptr_t       best   = ctxt.get_cursor();
-            while (!fnOpcodeIs(machine_t::ePop))
+
+            u16 n = m_program.read_u16(); // number of operands
+            while (n != 0)
             {
                 ctxt.set_cursor(cursor);
+
                 if (!fnExec(ctxt))
                 {
                     ctxt.set_cursor(cursor);
                     return false;
                 }
+                skip_jmp();
+
                 best = ctxt.get_cursor().furthest(best);
+                
+                n--;
             }
             return true;
         }
@@ -526,13 +565,18 @@ namespace xcore
         bool machine_t::fnSequence(context_t& ctxt)
         {
             crunes_t::ptr_t start = ctxt.get_cursor();
-            while (!fnOpcodeIs(ePop))
+
+            u16 n = m_program.read_u16(); // number of operands
+            while (n != 0)
             {
                 if (!fnExec(ctxt))
                 {
                     ctxt.get_cursor() = start;
                     return false;
                 }
+                skip_jmp();
+
+                n--;
             }
             return true;
         }
@@ -540,20 +584,13 @@ namespace xcore
         bool machine_t::fnWithin(context_t& ctxt, s32 _min, s32 _max)
         {
             crunes_t::ptr_t const cursor = ctxt.get_cursor();
-            s32                   pc     = m_pc;
             s32                   i      = 0;
             while (i < _max)
             {
-                do
+                if (!fnExec(ctxt))
                 {
-                    if (!fnExec(ctxt))
-                    {
-                        ctxt.set_cursor(cursor);
-                        return false;
-                    }
-                } while (!fnOpcodeIs(ePop));
-
-                m_pc = pc;
+                    break;
+                }
                 i += 1;
             }
 
@@ -571,20 +608,15 @@ namespace xcore
         bool machine_t::fnUntil(context_t& ctxt)
         {
             crunes_t::ptr_t const cursor = ctxt.get_cursor();
-            s32                   pc     = m_pc;
             s32                   i      = 0;
             while (!fnEndOfText(ctxt))
             {
-                do
+                if (fnExec(ctxt))
                 {
-                    if (!fnExec(ctxt))
-                        break;
-                } while (!fnOpcodeIs(ePop));
+                    // Encountered Until condition
+                    return true;
+                }
 
-                if (fnOpcodeIs(ePop))
-                    return true; // We found the 'until'
-
-                m_pc = pc;          // Reset program-counter
                 ctxt.reader.skip(); // Advance reader
             }
             ctxt.set_cursor(cursor);
@@ -593,13 +625,11 @@ namespace xcore
         bool machine_t::fnExtract(context_t& ctxt, va_r_t* var)
         {
             crunes_t::ptr_t start = ctxt.get_cursor();
-            while (!fnOpcodeIs(ePop))
+            if (!fnExec(ctxt))
             {
-                if (!fnExec(ctxt))
-                {
-                    return false;
-                }
-            };
+                return false;
+            }
+
             runes_reader_t varreader = ctxt.reader.select(start, ctxt.get_cursor());
             crunes_t       varrunes  = varreader.get_current();
             if (!varrunes.is_empty())
@@ -632,6 +662,44 @@ namespace xcore
         {
             ctxt.reader.skip();
             return true;
+        }
+        bool machine_t::fnDigest(context_t& ctxt, u8 flags)
+        {
+            while (ctxt.reader.valid())
+            {
+                while (true)
+                {
+                    uchar32 s = ctxt.reader.peek();
+                    if ((flags & parser_t::cWHITESPACE) == parser_t::cWHITESPACE)
+                    {
+                        if (s == ' ' || s == '\t' || s == '\r')
+                            break;
+                    }
+                    if ((flags & parser_t::cALPHABET) == parser_t::cALPHABET)
+                    {
+                        if ((flags & parser_t::cIGNORECASE) == parser_t::cIGNORECASE)
+                        {
+                            if (is_alpha(s))
+                                break;
+                        } else if ((flags & parser_t::cLOWERCASE) == parser_t::cLOWERCASE) {
+                            if (is_lower(s))
+                                break;
+                        } else if ((flags & parser_t::cUPPERCASE) == parser_t::cUPPERCASE) {
+                            if (is_upper(s))
+                                break;
+                        }
+                    }
+                    if ((flags & parser_t::cNUMERIC) == parser_t::cNUMERIC)
+                    {
+                        if (is_digit(s))
+                            break;
+                    }
+
+                    return false;
+                }
+                ctxt.reader.skip();
+            }
+            return false;
         }
         bool machine_t::fnIn(context_t& ctxt, runes_reader_t _chars)
         {
@@ -888,330 +956,42 @@ namespace xcore
 
         void use_case_parser2()
         {
-            // clang-format off
-            machine_t m;
-
-            m.Email();
+            xbytes<1024> buffer;
+            parser_t parser(buffer);
 
             // For examples see:
-            // - machine_t::Email()
-            // - machine_t::IPv4()
-
-            // clang-format on
+            // - parser_t::Email()
+            // - parser_t::IPv4()
+            parser_t::program_t prog = parser.Email();
 
             runes_reader_t  reader("john.doe@hotmail.com");
-            crunes_t::ptr_t cursor;
-            bool            result = m.execute(reader, cursor);
+            bool            result = parser.parse(prog, reader);
             // result == true !
         }
 
         parser_t::parser_t(buffer_t buffer)
         {
+            m_buffer = buffer;
+            
             buffer_t   machine_buffer = buffer(0, sizeof(machine_t));
             buffer_t   work_buffer    = buffer(sizeof(machine_t), buffer.size());
             void*      machine_mem    = machine_buffer.data();
-            machine_t* machine        = new (machine_mem) machine_t();
-            machine->initialize(work_buffer);
+            m_machine = new (machine_mem) machine_t();
+            m_machine->initialize(work_buffer);
         }
 
-        bool parser_t::Parse(runes_reader_t& reader)
+        bool parser_t::parse(program_t program, runes_reader_t& reader)
         {
-            machine_t*      machine = (machine_t*)m_buffer.data();
             crunes_t::ptr_t cursor  = reader.get_cursor();
-            return machine->execute(reader, cursor);
+            machine_t* m = program.m_machine;
+            if (m->execute(program, reader, cursor))
+            {
+                reader.set_cursor(cursor);
+                return true;
+            }
+            return false;
         }
 
-        parser_t& parser_t::Extract(va_r_t* var)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Extract(var);
-            return *this;
-        }
-        parser_t& parser_t::Pop()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Pop();
-            return *this;
-        }
-        parser_t& parser_t::Not()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Not();
-            return *this;
-        }
-
-        parser_t& parser_t::Or()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Or();
-            return *this;
-        }
-
-        parser_t& parser_t::And()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->And();
-            return *this;
-        }
-
-        parser_t& parser_t::Sequence()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Sequence();
-            return *this;
-        }
-
-        parser_t& parser_t::Within(s32 _min, s32 _max)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Within(_min, _max);
-            return *this;
-        }
-
-        parser_t& parser_t::Times(s32 _count)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Times(_count);
-            return *this;
-        }
-
-        parser_t& parser_t::OneOrMore()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->OneOrMore();
-            return *this;
-        }
-
-        parser_t& parser_t::ZeroOrMore()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->ZeroOrMore();
-            return *this;
-        }
-
-        parser_t& parser_t::ZeroOrOne()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->ZeroOrOne();
-            return *this;
-        }
-
-        parser_t& parser_t::While()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->While();
-            return *this;
-        }
-
-        parser_t& parser_t::Until()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Until();
-            return *this;
-        }
-
-        parser_t& parser_t::Enclosed(uchar32 _open, uchar32 _close)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Enclosed(_open, _close);
-            return *this;
-        }
-
-        parser_t& parser_t::Any()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Any();
-            return *this;
-        }
-
-        parser_t& parser_t::In(crunes_t const& _chars)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->In(_chars);
-            return *this;
-        }
-
-        parser_t& parser_t::Between(uchar32 _from, uchar32 _until)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Between(_from, _until);
-            return *this;
-        }
-
-        parser_t& parser_t::Alphabet()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Alphabet();
-            return *this;
-        }
-
-        parser_t& parser_t::Digit()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Digit();
-            return *this;
-        }
-
-        parser_t& parser_t::Hex()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Hex();
-            return *this;
-        }
-
-        parser_t& parser_t::AlphaNumeric()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->AlphaNumeric();
-            return *this;
-        }
-
-        parser_t& parser_t::Exact(crunes_t const& _text)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Exact(_text);
-            return *this;
-        }
-
-        parser_t& parser_t::Like(crunes_t const& _text)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Like(_text);
-            return *this;
-        }
-
-        parser_t& parser_t::WhiteSpace()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->WhiteSpace();
-            return *this;
-        }
-
-        parser_t& parser_t::Is(uchar32 _c)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Is(_c);
-            return *this;
-        }
-
-        parser_t& parser_t::Word()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Word();
-            return *this;
-        }
-
-        parser_t& parser_t::EndOfText()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->EndOfText();
-            return *this;
-        }
-
-        parser_t& parser_t::EndOfLine()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->EndOfLine();
-            return *this;
-        }
-
-        parser_t& parser_t::Unsigned32(u32 _min, u32 _max)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Unsigned32(_min, _max);
-            return *this;
-        }
-
-        parser_t& parser_t::Unsigned64(u64 _min, u64 _max)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Unsigned64(_min, _max);
-            return *this;
-        }
-
-        parser_t& parser_t::Integer32(s32 _min, s32 _max)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Integer32(_min, _max);
-            return *this;
-        }
-
-        parser_t& parser_t::Integer64(s64 _min, s64 _max)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Integer64(_min, _max);
-            return *this;
-        }
-
-        parser_t& parser_t::Float32(f32 _min, f32 _max)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Float32(_min, _max);
-            return *this;
-        }
-
-        parser_t& parser_t::Float64(f64 _min, f64 _max)
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Float64(_min, _max);
-            return *this;
-        }
-
-        parser_t& parser_t::Email()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Email();
-            return *this;
-        }
-
-        parser_t& parser_t::IPv4()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->IPv4();
-            return *this;
-        }
-
-        parser_t& parser_t::Host()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Host();
-            return *this;
-        }
-
-        parser_t& parser_t::Date()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Date();
-            return *this;
-        }
-
-        parser_t& parser_t::Time()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Time();
-            return *this;
-        }
-
-        parser_t& parser_t::Phone()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->Phone();
-            return *this;
-        }
-
-        parser_t& parser_t::ServerAddress()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->ServerAddress();
-            return *this;
-        }
-
-        parser_t& parser_t::URI()
-        {
-            machine_t* machine = (machine_t*)m_buffer.data();
-            machine->URI();
-            return *this;
-        }
 
     } // namespace xparser2
 
