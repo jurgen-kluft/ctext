@@ -30,16 +30,24 @@ namespace xcore
         erunes_t chars(erunes_t::eol | erunes_t::eof);
         line.m_ascii.m_bos = m_buffer_text_cursor.m_ascii;
         line.m_ascii.m_str = m_buffer_text_cursor.m_ascii;
-        if (m_buffer_text.scan(m_buffer_text_cursor, chars))
+
+        erunes_t encountered;
+        if (m_buffer_text.scan(m_buffer_text_cursor, chars, encountered))
         {
-            // We encountered a special character
-            line.m_ascii.m_end = m_buffer_text_cursor.m_ascii;
-            line.m_ascii.m_eos = m_buffer_text_cursor.m_ascii;
-            m_buffer_text.skip(m_buffer_text_cursor, chars);
-            return true;
+            // If we encountered eol, handle the line, otherwise return false
+            if (encountered.is(erunes_t::eol))
+            {
+                line.m_ascii.m_end = m_buffer_text_cursor.m_ascii;
+                line.m_ascii.m_eos = m_buffer_text_cursor.m_ascii;
+                m_buffer_text.skip(m_buffer_text_cursor, chars);
+                return true;
+            }
+
+            m_buffer_text_cursor.m_ascii = line.m_ascii.m_bos;
         }
         else
         {
+            // Something going wrong
             line.m_ascii.m_end = line.m_ascii.m_str;
             line.m_ascii.m_eos = line.m_ascii.m_str;
         }
@@ -50,10 +58,6 @@ namespace xcore
     {
         if (!determineLine(line))
         {
-            // Is there still any more data in the stream?
-            if (m_stream_pos >= m_stream_len)
-                return false;
-
             if (m_buffer_data == nullptr && m_buffer_data0 == nullptr)
             {
                 if (m_stream->canZeroCopy())
@@ -79,11 +83,14 @@ namespace xcore
             }
             else
             {
-                // Could not find EOL or EOF or there is no text left to scan
+                // Is there still any more data in the stream?
+                if (m_stream_pos >= m_stream_len)
+                    return false;
 
+                // Could not find EOL or EOF or there is no text left to scan
                 if (m_stream->canZeroCopy())
                 {
-                    s64 rest     = m_buffer_text.m_ascii.m_end - m_buffer_text.m_ascii.m_str;
+                    s64 rest     = m_buffer_text.m_ascii.m_end - m_buffer_text_cursor.m_ascii;
                     m_stream_pos = m_stream->getPos();
                     m_stream_pos -= rest;
                     m_stream->setPos(m_stream_pos);
