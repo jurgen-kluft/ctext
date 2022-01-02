@@ -308,6 +308,7 @@ namespace xcore
             XCORE_CLASS_PLACEMENT_NEW_DELETE
         };
 
+        parser_t::program_t::program_t() : m_machine(nullptr), m_pc(0) {}
         parser_t::program_t::program_t(machine_t* m) : m_machine(m) { m_pc = m->pc(); }
         parser_t::program_t::program_t(machine_t* m, pc_t pc) : m_machine(m), m_pc(pc) {}
         parser_t::program_t::program_t(const program_t& p) : m_machine(p.m_machine), m_pc(p.m_pc) {}

@@ -31,6 +31,7 @@ namespace xcore
 
             struct program_t
             {
+                program_t();
                 program_t(machine_t* m);
                 program_t(machine_t* m, pc_t pc);
                 program_t(const program_t& p);
@@ -82,7 +83,7 @@ namespace xcore
                 u32 m_pc;
             };
 
-            bool parse(program_t program, runes_reader_t& reader);
+            static bool parse(program_t program, runes_reader_t& reader);
 
             program_t Program(program_t p);
             program_t Not(program_t p);
