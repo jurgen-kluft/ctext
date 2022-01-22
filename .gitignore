@@ -1,5 +1,7 @@
 #ignore all files
-*.*
+*
+!*/
+
 vendor/
 t2-output/
 target/
