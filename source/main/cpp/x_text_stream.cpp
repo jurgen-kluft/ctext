@@ -7,7 +7,7 @@
 
 #include "xtext/x_text_stream.h"
 
-namespace xcore
+namespace ncore
 {
     text_stream_t::text_stream_t(istream_t* stream, encoding e) : m_stream(stream), m_stream_len(0), m_stream_pos(0), m_buffer_data(nullptr), m_buffer_size(0), m_buffer_text()
     {
@@ -75,7 +75,7 @@ namespace xcore
                     }
                     else
                     {
-                        m_buffer_data = (xbyte*)context_t::system_alloc()->allocate(m_buffer_cap, sizeof(void*));
+                        m_buffer_data = (u8*)context_t::system_alloc()->allocate(m_buffer_cap, sizeof(void*));
                         m_buffer_size = 0;
                         m_stream_pos  = 0;
                         m_stream_len  = m_stream->getLength();
@@ -133,10 +133,10 @@ namespace xcore
                     ascii::pcrune pos = m_buffer_text_cursor.m_ascii;
 
                     // Move the 'rest' to the beginning of our buffer and join it with new data
-                    xbyte* dst = m_buffer_data;
+                    u8* dst = m_buffer_data;
                     while (pos < m_buffer_text.m_ascii.m_end)
                     {
-                        *dst++ = (xbyte)*pos++;
+                        *dst++ = (u8)*pos++;
                     }
                     m_buffer_size               = (u32)(dst - m_buffer_data);
                     s64       read_request_size = m_buffer_cap - m_buffer_size;
@@ -199,8 +199,8 @@ namespace xcore
     }
 
     s64 text_stream_t::vgetPos() const { return m_stream->getPos(); }
-    s64 text_stream_t::vread(xbyte* buffer, s64 count) { return m_stream->read(buffer, count); }
-    s64 text_stream_t::vread0(xbyte const*& buffer, s64 count) { return m_stream->read0(buffer, count); }
-    s64 text_stream_t::vwrite(const xbyte* buffer, s64 count) { return m_stream->write(buffer, count); }
+    s64 text_stream_t::vread(u8* buffer, s64 count) { return m_stream->read(buffer, count); }
+    s64 text_stream_t::vread0(u8 const*& buffer, s64 count) { return m_stream->read0(buffer, count); }
+    s64 text_stream_t::vwrite(const u8* buffer, s64 count) { return m_stream->write(buffer, count); }
 
-} // namespace xcore
+} // namespace ncore

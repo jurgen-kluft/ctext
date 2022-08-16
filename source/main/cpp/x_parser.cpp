@@ -2,7 +2,7 @@
 #include "xbase/x_runes.h"
 #include "xtext/x_parser.h"
 
-namespace xcore
+namespace ncore
 {
     namespace combparser
     {
@@ -416,4 +416,4 @@ namespace xcore
         } // namespace utils
     }     // namespace combparser
 
-} // namespace xcore
+} // namespace ncore

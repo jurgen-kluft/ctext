@@ -7,7 +7,7 @@
 
 #include "xtext/x_parser3.h"
 
-namespace xcore
+namespace ncore
 {
     namespace xparser
     {
@@ -150,7 +150,7 @@ namespace xcore
         static void use_case_1()
         {
             alloc_t* alloc = alloc_t::get_system();
-            xbyte* data = (xbyte*)alloc->allocate(1024);
+            u8* data = (u8*)alloc->allocate(1024);
             buffer_t buffer(1024, data);
             parser_t p(buffer);
 
@@ -196,7 +196,7 @@ namespace xcore
             );
         }
     } // namespace xparser
-} // namespace xcore
+} // namespace ncore
 
 /*
 

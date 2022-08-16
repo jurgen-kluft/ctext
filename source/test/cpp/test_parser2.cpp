@@ -4,16 +4,16 @@
 #include "xtext/x_parser2.h"
 #include "xunittest/xunittest.h"
 
-using namespace xcore;
+using namespace ncore;
 
-namespace xcore
+namespace ncore
 {
     extern alloc_t* gTestAllocator;
     namespace xparser
     {
         extern void use_case_parser2();
     }
-} // namespace xcore
+} // namespace ncore
 
 UNITTEST_SUITE_BEGIN(test_parser2)
 {

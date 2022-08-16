@@ -6,7 +6,7 @@
 
 #include "xtext/x_parser2.h"
 
-namespace xcore
+namespace ncore
 {
     namespace xparser2
     {
@@ -128,8 +128,8 @@ namespace xcore
                     crunes_t  r      = reader.get_current();
                     u16 const offset = (u16)writer.pos();
                     writer.write((u16)r.m_type);
-                    writer.write((uptr)r.m_ascii.m_str);
-                    writer.write((uptr)r.m_ascii.m_end);
+                    writer.write((ptr_t)r.m_ascii.m_str);
+                    writer.write((ptr_t)r.m_ascii.m_end);
                     return offset;
                 }
                 static s32     read_s32(binary_reader_t& reader) { return reader.read_s32(); }
@@ -957,7 +957,7 @@ namespace xcore
 
         void use_case_parser2()
         {
-            xbytes<1024> buffer;
+            u8s<1024> buffer;
             parser_t parser(buffer);
 
             // For examples see:
@@ -996,4 +996,4 @@ namespace xcore
 
     } // namespace xparser2
 
-} // namespace xcore
+} // namespace ncore

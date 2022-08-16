@@ -9,7 +9,7 @@
 #include "xbase/x_va_list.h"
 #include "xbase/x_runes.h"
 
-namespace xcore
+namespace ncore
 {
     namespace xparser2
     {
@@ -133,6 +133,6 @@ namespace xcore
         };
 
     } // namespace xparser
-} // namespace xcore
+} // namespace ncore
 
 #endif

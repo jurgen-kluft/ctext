@@ -8,7 +8,7 @@
 #include "xbase/x_runes.h"
 #include "xbase/x_stream.h"
 
-namespace xcore
+namespace ncore
 {
     class crunes_t;
 
@@ -30,14 +30,14 @@ namespace xcore
         void close() { vclose(); }
 
     protected:
-        istream_t*   m_stream;
-        s64          m_stream_pos;
-        u64          m_stream_len;
-        xbyte*       m_buffer_data;
-        xbyte const* m_buffer_data0;
-        s64          m_buffer_cap;
-        s64          m_buffer_size;
-        crunes_t     m_buffer_text;
+        istream_t*      m_stream;
+        s64             m_stream_pos;
+        u64             m_stream_len;
+        u8*             m_buffer_data;
+        u8 const*       m_buffer_data0;
+        s64             m_buffer_cap;
+        s64             m_buffer_size;
+        crunes_t        m_buffer_text;
         crunes_t::ptr_t m_buffer_text_cursor;
 
         bool determineLine(crunes_t& line);
@@ -52,11 +52,11 @@ namespace xcore
         virtual void vsetLength(u64 length);
         virtual s64  vsetPos(s64 pos);
         virtual s64  vgetPos() const;
-        virtual s64  vread(xbyte* buffer, s64 count);
-        virtual s64  vread0(xbyte const*& buffer, s64 count);
-        virtual s64  vwrite(const xbyte* buffer, s64 count);
+        virtual s64  vread(u8* buffer, s64 count);
+        virtual s64  vread0(u8 const*& buffer, s64 count);
+        virtual s64  vwrite(const u8* buffer, s64 count);
     };
 
-} // namespace xcore
+} // namespace ncore
 
 #endif // __XTEXT_STREAM_H__

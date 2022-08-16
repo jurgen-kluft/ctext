@@ -4,20 +4,20 @@
 #include "xtext/x_text_stream.h"
 #include "xunittest/xunittest.h"
 
-extern xcore::alloc_t* gTestAllocator;
+extern ncore::alloc_t* gTestAllocator;
 extern unsigned char   read_text_txt[];
 extern unsigned int    read_text_txt_len;
 
-namespace xcore
+namespace ncore
 {
     class mem_stream : public istream_t
     {
-        xbyte const* m_buffer;
-        xsize_t      m_size;
-        xsize_t      m_cursor;
+        u8 const* m_buffer;
+        uint_t      m_size;
+        uint_t      m_cursor;
 
     public:
-        mem_stream(xbyte const* data, xsize_t length) : m_buffer(data), m_size(length), m_cursor(0) {}
+        mem_stream(u8 const* data, uint_t length) : m_buffer(data), m_size(length), m_cursor(0) {}
 
     protected:
         virtual bool vcanSeek() const { return true; }
@@ -34,7 +34,7 @@ namespace xcore
             return m_cursor;
         }
         virtual s64 vgetPos() const { return m_cursor; }
-        virtual s64 vread(xbyte* buffer, s64 count)
+        virtual s64 vread(u8* buffer, s64 count)
         {
             s64 i = 0;
             while (i < count && m_cursor < m_size)
@@ -44,7 +44,7 @@ namespace xcore
             return i;
         }
 
-        virtual s64 vread0(xbyte const*& buffer, s64 count)
+        virtual s64 vread0(u8 const*& buffer, s64 count)
         {
             if (m_cursor < m_size)
             {
@@ -63,11 +63,11 @@ namespace xcore
             return count;
         }
 
-        virtual s64 vwrite(const xbyte* buffer, s64 count) { return -1; }
+        virtual s64 vwrite(const u8* buffer, s64 count) { return -1; }
     };
-} // namespace xcore
+} // namespace ncore
 
-using namespace xcore;
+using namespace ncore;
 
 UNITTEST_SUITE_BEGIN(test_text_stream)
 {
