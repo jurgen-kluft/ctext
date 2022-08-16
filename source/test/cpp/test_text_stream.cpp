@@ -1,8 +1,8 @@
-#include "xbase/x_allocator.h"
-#include "xbase/x_stream.h"
-#include "xbase/x_runes.h"
-#include "xtext/x_text_stream.h"
-#include "xunittest/xunittest.h"
+#include "cbase/c_allocator.h"
+#include "cbase/c_stream.h"
+#include "cbase/c_runes.h"
+#include "ctext/c_text_stream.h"
+#include "cunittest/xunittest.h"
 
 extern ncore::alloc_t* gTestAllocator;
 extern unsigned char   read_text_txt[];

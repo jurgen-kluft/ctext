@@ -1,13 +1,13 @@
 #ifndef __XTEXT_XPARSER3_H__
 #define __XTEXT_XPARSER3_H__
-#include "xbase/x_target.h"
+#include "cbase/c_target.h"
 #ifdef USE_PRAGMA_ONCE
 #pragma once
 #endif
 
-#include "xbase/x_buffer.h"
-#include "xbase/x_va_list.h"
-#include "xbase/x_runes.h"
+#include "cbase/c_buffer.h"
+#include "cbase/c_va_list.h"
+#include "cbase/c_runes.h"
 
 namespace ncore
 {

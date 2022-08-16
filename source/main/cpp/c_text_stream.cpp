@@ -1,11 +1,11 @@
-#include "xbase/x_target.h"
-#include "xbase/x_allocator.h"
-#include "xbase/x_buffer.h"
-#include "xbase/x_context.h"
-#include "xbase/x_debug.h"
-#include "xbase/x_runes.h"
+#include "cbase/c_target.h"
+#include "cbase/c_allocator.h"
+#include "cbase/c_buffer.h"
+#include "cbase/c_context.h"
+#include "cbase/c_debug.h"
+#include "cbase/c_runes.h"
 
-#include "xtext/x_text_stream.h"
+#include "ctext/c_text_stream.h"
 
 namespace ncore
 {
