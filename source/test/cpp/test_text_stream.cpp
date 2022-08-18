@@ -2,7 +2,7 @@
 #include "cbase/c_stream.h"
 #include "cbase/c_runes.h"
 #include "ctext/c_text_stream.h"
-#include "cunittest/xunittest.h"
+#include "cunittest/cunittest.h"
 
 extern ncore::alloc_t* gTestAllocator;
 extern unsigned char   read_text_txt[];

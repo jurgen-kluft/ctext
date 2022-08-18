@@ -1,7 +1,7 @@
 #include "cbase/c_allocator.h"
 #include "cbase/c_runes.h"
 #include "ctext/c_parser.h"
-#include "cunittest/xunittest.h"
+#include "cunittest/cunittest.h"
 
 using namespace ncore;
 
