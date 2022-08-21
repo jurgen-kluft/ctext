@@ -1,5 +1,5 @@
-#ifndef __XTEXT_XPARSER2_H__
-#define __XTEXT_XPARSER2_H__
+#ifndef __CTEXT_XPARSER2_H__
+#define __CTEXT_XPARSER2_H__
 #include "cbase/c_target.h"
 #ifdef USE_PRAGMA_ONCE
 #pragma once

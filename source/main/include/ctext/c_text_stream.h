@@ -1,5 +1,5 @@
-#ifndef __XTEXT_STREAM_H__
-#define __XTEXT_STREAM_H__
+#ifndef __CTEXT_STREAM_H__
+#define __CTEXT_STREAM_H__
 #include "cbase/c_target.h"
 #ifdef USE_PRAGMA_ONCE
 #pragma once
@@ -59,4 +59,4 @@ namespace ncore
 
 } // namespace ncore
 
-#endif // __XTEXT_STREAM_H__
+#endif // __CTEXT_STREAM_H__
