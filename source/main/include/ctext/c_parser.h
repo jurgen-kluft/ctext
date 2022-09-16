@@ -274,11 +274,6 @@ namespace ncore
                 virtual bool Check(runes_reader_t&);
             };
 
-            // TODO:class SmallLetter;
-            // TODO:class CapitalLetter;
-            // TODO:Class Letter;
-            // TODO:Class Punctuation
-
             class Alphabet : public tokenizer_t
             {
                 Between m_lower_case;
