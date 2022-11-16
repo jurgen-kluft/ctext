@@ -9,7 +9,7 @@
 
 namespace ncore
 {
-    namespace xparser
+    namespace parser3
     {
         // Call parser_t when starting a new code block.
         // You will not be able to write any additional commands to this block when it has been
@@ -64,88 +64,47 @@ namespace ncore
         static parser_t::code_t sNullCode;
 
         parser_t::code_t* parser_t::Extract(va_r_t* var, code_t* lhs) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Not(code_t* lhs) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Or(code_t* lhs, code_t* rhs) { return &sNullCode; }
-
         parser_t::code_t* parser_t::And(code_t* lhs, code_t* rhs) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Sequence(code_t* lhs) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Within(s32 _min, s32 _max) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Times(s32 _count) { return &sNullCode; }
-
         parser_t::code_t* parser_t::OneOrMore(code_t* code) { return &sNullCode; }
-
         parser_t::code_t* parser_t::ZeroOrMore(code_t* code) { return &sNullCode; }
-
         parser_t::code_t* parser_t::ZeroOrOne(code_t* code) { return &sNullCode; }
-
         parser_t::code_t* parser_t::While(code_t* code) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Until(code_t* until, code_t* code) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Enclosed(uchar32 _open, uchar32 _close) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Any() { return &sNullCode; }
-
         parser_t::code_t* parser_t::In(crunes_t const& _chars) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Between(uchar32 _from, uchar32 _until) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Alphabet() { return &sNullCode; }
-
         parser_t::code_t* parser_t::Digit() { return &sNullCode; }
-
         parser_t::code_t* parser_t::Hex() { return &sNullCode; }
-
         parser_t::code_t* parser_t::AlphaNumeric() { return &sNullCode; }
-
         parser_t::code_t* parser_t::Exact(crunes_t const& _text) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Like(crunes_t const& _text) { return &sNullCode; }
-
         parser_t::code_t* parser_t::WhiteSpace(u8 flags) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Is(uchar32 _c) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Word() { return &sNullCode; }
-
         parser_t::code_t* parser_t::EndOfText() { return &sNullCode; }
-
         parser_t::code_t* parser_t::EndOfLine() { return &sNullCode; }
         parser_t::code_t* parser_t::EOL() { return &sNullCode; }
-
         parser_t::code_t* parser_t::Unsigned32(u32 _min, u32 _max) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Unsigned64(u64 _min, u64 _max) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Integer32(s32 _min, s32 _max) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Integer64(s64 _min, s64 _max) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Float32(f32 _min, f32 _max) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Float64(f64 _min, f64 _max) { return &sNullCode; }
-
         parser_t::code_t* parser_t::Email() { return &sNullCode; }
-
         parser_t::code_t* parser_t::IPv4() { return &sNullCode; }
-
         parser_t::code_t* parser_t::Host() { return &sNullCode; }
-
         parser_t::code_t* parser_t::Date() { return &sNullCode; }
-
         parser_t::code_t* parser_t::Time() { return &sNullCode; }
-
         parser_t::code_t* parser_t::Phone() { return &sNullCode; }
-
         parser_t::code_t* parser_t::ServerAddress() { return &sNullCode; }
-
         parser_t::code_t* parser_t::URI() { return &sNullCode; }
-
 
         static void use_case_1()
         {
@@ -195,7 +154,7 @@ namespace ncore
                 )
             );
         }
-    } // namespace xparser
+    } // namespace parser3
 } // namespace ncore
 
 /*

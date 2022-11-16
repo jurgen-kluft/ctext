@@ -11,7 +11,7 @@
 
 namespace ncore
 {
-    namespace xparser
+    namespace parser3
     {
         // Minimal parser interface / API
         /*
@@ -141,7 +141,7 @@ namespace ncore
             buffer_t m_buffer;
         };
 
-    } // namespace xparser
+    } // namespace parser3
 } // namespace ncore
 
 #endif
