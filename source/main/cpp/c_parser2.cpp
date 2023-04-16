@@ -305,7 +305,7 @@ namespace ncore
             }
 
 
-            XCORE_CLASS_PLACEMENT_NEW_DELETE
+            DCORE_CLASS_PLACEMENT_NEW_DELETE
         };
 
         parser_t::program_t::program_t() : m_machine(nullptr), m_pc(0) {}
