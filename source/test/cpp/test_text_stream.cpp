@@ -4,7 +4,6 @@
 #include "ctext/c_text_stream.h"
 #include "cunittest/cunittest.h"
 
-extern ncore::alloc_t* gTestAllocator;
 extern unsigned char   read_text_txt[];
 extern unsigned int    read_text_txt_len;
 
