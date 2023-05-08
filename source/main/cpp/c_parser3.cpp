@@ -1,7 +1,7 @@
-#include "cbase/c_target.h"
+#include "ccore/c_target.h"
 #include "cbase/c_buffer.h"
 #include "cbase/c_allocator.h"
-#include "cbase/c_debug.h"
+#include "ccore/c_debug.h"
 #include "cbase/c_va_list.h"
 #include "cbase/c_runes.h"
 
