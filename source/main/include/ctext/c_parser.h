@@ -2,7 +2,7 @@
 #define __CTEXT_XPARSER_H__
 #include "ccore/c_target.h"
 #ifdef USE_PRAGMA_ONCE
-#pragma once
+#    pragma once
 #endif
 
 #include "cbase/c_runes.h"
@@ -29,10 +29,7 @@ namespace ncore
         class tokenizer_1_t : public tokenizer_t
         {
         public:
-            tokenizer_1_t(tokenizer_t& toka)
-                : m_tokenizer_a(toka)
-            {
-            }
+            tokenizer_1_t(tokenizer_t& toka) : m_tokenizer_a(toka) {}
 
         protected:
             tokenizer_t& m_tokenizer_a;
@@ -40,11 +37,7 @@ namespace ncore
         class tokenizer_2_t : public tokenizer_t
         {
         public:
-            tokenizer_2_t(tokenizer_t& toka, tokenizer_t& tokb)
-                : m_tokenizer_a(toka)
-                , m_tokenizer_b(tokb)
-            {
-            }
+            tokenizer_2_t(tokenizer_t& toka, tokenizer_t& tokb) : m_tokenizer_a(toka), m_tokenizer_b(tokb) {}
 
         protected:
             tokenizer_t& m_tokenizer_a;
@@ -56,40 +49,28 @@ namespace ncore
             class Not : public tokenizer_1_t
             {
             public:
-                inline Not(tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                {
-                }
+                inline Not(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(runes_reader_t&);
             };
 
             class Or : public tokenizer_2_t
             {
             public:
-                inline Or(tokenizer_t& toka, tokenizer_t& tokb)
-                    : tokenizer_2_t(toka, tokb)
-                {
-                }
+                inline Or(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
                 virtual bool Check(runes_reader_t&);
             };
 
             class And : public tokenizer_2_t
             {
             public:
-                And(tokenizer_t& toka, tokenizer_t& tokb)
-                    : tokenizer_2_t(toka, tokb)
-                {
-                }
+                And(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
                 virtual bool Check(runes_reader_t&);
             };
 
             class Sequence : public tokenizer_2_t
             {
             public:
-                inline Sequence(tokenizer_t& toka, tokenizer_t& tokb)
-                    : tokenizer_2_t(toka, tokb)
-                {
-                }
+                inline Sequence(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
                 virtual bool Check(runes_reader_t&);
             };
             class Sequence3 : public tokenizer_2_t
@@ -97,11 +78,7 @@ namespace ncore
                 tokenizer_t& m_tokenizer_c;
 
             public:
-                inline Sequence3(tokenizer_t& toka, tokenizer_t& tokb, tokenizer_t& tokc)
-                    : tokenizer_2_t(toka, tokb)
-                    , m_tokenizer_c(tokc)
-                {
-                }
+                inline Sequence3(tokenizer_t& toka, tokenizer_t& tokb, tokenizer_t& tokc) : tokenizer_2_t(toka, tokb), m_tokenizer_c(tokc) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -110,24 +87,9 @@ namespace ncore
                 u64 m_min, m_max;
 
             public:
-                Within(u64 min, u64 max, tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                    , m_min(min)
-                    , m_max(max)
-                {
-                }
-                Within(u64 max, tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                    , m_min(0)
-                    , m_max(max)
-                {
-                }
-                Within(tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                    , m_min(0)
-                    , m_max(0xffffffffffffffffUL)
-                {
-                }
+                Within(u64 min, u64 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_min(min), m_max(max) {}
+                Within(u64 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_min(0), m_max(max) {}
+                Within(tokenizer_t& toka) : tokenizer_1_t(toka), m_min(0), m_max(0xffffffffffffffffUL) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -136,31 +98,21 @@ namespace ncore
                 s32 m_max;
 
             public:
-                inline Times(s32 max, tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                    , m_max(max)
-                {
-                }
+                inline Times(s32 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_max(max) {}
                 virtual bool Check(runes_reader_t&);
             };
 
             class OneOrMore : public tokenizer_1_t
             {
             public:
-                inline OneOrMore(tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                {
-                }
+                inline OneOrMore(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(runes_reader_t&);
             };
 
             class ZeroOrOne : public tokenizer_1_t
             {
             public:
-                inline ZeroOrOne(tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                {
-                }
+                inline ZeroOrOne(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(runes_reader_t&);
             };
             typedef ZeroOrOne Optional;
@@ -169,10 +121,7 @@ namespace ncore
             class While : public tokenizer_1_t
             {
             public:
-                inline While(tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                {
-                }
+                inline While(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(runes_reader_t&);
             };
             typedef While ZeroOrMore;
@@ -180,10 +129,7 @@ namespace ncore
             class Until : public tokenizer_1_t
             {
             public:
-                inline Until(tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                {
-                }
+                inline Until(tokenizer_t& toka) : tokenizer_1_t(toka) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -192,25 +138,17 @@ namespace ncore
                 runes_reader_t& m_selection;
 
             public:
-                inline Extract(runes_reader_t& m1, tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                    , m_selection(m1)
-                {
-                }
+                inline Extract(runes_reader_t& m1, tokenizer_t& toka) : tokenizer_1_t(toka), m_selection(m1) {}
                 virtual bool Check(runes_reader_t&);
             };
 
-            typedef void (*CallBack)(runes_reader_t&, crunes_t::ptr_t&);
+            typedef void (*CallBack)(runes_reader_t&, u32&);
             class ReturnToCallback : public tokenizer_1_t
             {
                 CallBack m_cb;
 
             public:
-                inline ReturnToCallback(CallBack cb, tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                    , m_cb(cb)
-                {
-                }
+                inline ReturnToCallback(CallBack cb, tokenizer_t& toka) : tokenizer_1_t(toka), m_cb(cb) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -220,12 +158,7 @@ namespace ncore
                 runes_reader_t m_close;
 
             public:
-                inline Enclosed(runes_reader_t open, runes_reader_t close, tokenizer_t& toka)
-                    : tokenizer_1_t(toka)
-                    , m_open(open)
-                    , m_close(close)
-                {
-                }
+                inline Enclosed(runes_reader_t open, runes_reader_t close, tokenizer_t& toka) : tokenizer_1_t(toka), m_open(open), m_close(close) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -247,30 +180,19 @@ namespace ncore
 
             public:
                 In() {}
-				In(const char* str, u32 len) : m_input(str,str+len) {}
-                In(runes_reader_t input)
-                    : m_input(input)
-                {
-                }
+                In(const char* str, u32 len) : m_input(str, str + len) {}
+                In(runes_reader_t input) : m_input(input) {}
                 virtual bool Check(runes_reader_t&);
             };
 
             class Between : public tokenizer_t
             {
                 uchar32 m_lower;
-                uchar32 m_upper;    // upper is inclusive
+                uchar32 m_upper; // upper is inclusive
 
             public:
-                Between()
-                    : m_lower('a')
-                    , m_upper('z')
-                {
-                }
-                Between(uchar32 lower, uchar32 upper)
-                    : m_lower(lower)
-                    , m_upper(upper)
-                {
-                }
+                Between() : m_lower('a'), m_upper('z') {}
+                Between(uchar32 lower, uchar32 upper) : m_lower(lower), m_upper(upper) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -280,11 +202,7 @@ namespace ncore
                 Between m_upper_case;
 
             public:
-                Alphabet()
-                    : m_lower_case('a', 'z')
-                    , m_upper_case('A', 'Z')
-                {
-                }
+                Alphabet() : m_lower_case('a', 'z'), m_upper_case('A', 'Z') {}
                 virtual bool Check(runes_reader_t&);
             };
             extern Alphabet sAlphabet;
@@ -294,10 +212,7 @@ namespace ncore
                 Between m_digit;
 
             public:
-                Digit()
-                    : m_digit('0', '9')
-                {
-                }
+                Digit() : m_digit('0', '9') {}
                 virtual bool Check(runes_reader_t&);
             };
             extern Digit sDigit;
@@ -309,11 +224,7 @@ namespace ncore
                 Between m_upper_case;
 
             public:
-                Hex()
-                    : m_lower_case('a', 'f')
-                    , m_upper_case('A', 'F')
-                {
-                }
+                Hex() : m_lower_case('a', 'f'), m_upper_case('A', 'F') {}
                 virtual bool Check(runes_reader_t&);
             };
             extern Hex sHex;
@@ -332,37 +243,22 @@ namespace ncore
 
             public:
                 Exact() {}
-                Exact(const char* str, u32 len ) : m_input(str, str + len) {}
-                Exact(runes_reader_t input)
-                    : m_input(input)
-                {
-                }
+                Exact(const char* str, u32 len) : m_input(str, str + len) {}
+                Exact(runes_reader_t input) : m_input(input) {}
                 virtual bool Check(runes_reader_t&);
             };
 
             class Like : public tokenizer_t
             {
-                runes_reader_t  m_input;
-                crunes_t::ptr_t m_from;
-                crunes_t::ptr_t m_to;
+                runes_reader_t m_input;
+                u32            m_from;
+                u32            m_to;
 
             public:
                 Like() {}
-                Like(runes_reader_t input)
-                    : m_input(input)
-                {
-                }
-                Like(runes_reader_t input, crunes_t::ptr_t to)
-                    : m_input(input)
-                    , m_to(to)
-                {
-                }
-                Like(runes_reader_t input, crunes_t::ptr_t from, crunes_t::ptr_t to)
-                    : m_input(input)
-                    , m_from(from)
-                    , m_to(to)
-                {
-                }
+                Like(runes_reader_t input) : m_input(input) {}
+                Like(runes_reader_t input, u32 to) : m_input(input), m_to(to) {}
+                Like(runes_reader_t input, u32 from, u32 to) : m_input(input), m_from(from), m_to(to) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -371,9 +267,7 @@ namespace ncore
                 In m_whitespace;
 
             public:
-                WhiteSpace() : m_whitespace(" \t\n\r", 4)
-                {
-                }
+                WhiteSpace() : m_whitespace(" \t\n\r", 4) {}
                 virtual bool Check(runes_reader_t&);
             };
             extern WhiteSpace sWhitespace;
@@ -383,14 +277,8 @@ namespace ncore
                 uchar32 m_char;
 
             public:
-                Is()
-                    : m_char(' ')
-                {
-                }
-                Is(uchar32 c)
-                    : m_char(c)
-                {
-                }
+                Is() : m_char(' ') {}
+                Is(uchar32 c) : m_char(c) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -432,21 +320,9 @@ namespace ncore
                 s64 m_max;
 
             public:
-                Integer()
-                    : m_min(0)
-                    , m_max(0x7fffffffffffffffL)
-                {
-                }
-                Integer(s64 max)
-                    : m_min(0)
-                    , m_max(max)
-                {
-                }
-                Integer(s64 min, s64 max)
-                    : m_min(min)
-                    , m_max(max)
-                {
-                }
+                Integer() : m_min(0), m_max(0x7fffffffffffffffL) {}
+                Integer(s64 max) : m_min(0), m_max(max) {}
+                Integer(s64 min, s64 max) : m_min(min), m_max(max) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -456,21 +332,9 @@ namespace ncore
                 f32 m_max;
 
             public:
-                Float()
-                    : m_min(0.0f)
-                    , m_max(3.402823e+38f)
-                {
-                }
-                Float(f32 max)
-                    : m_min(0.0f)
-                    , m_max(max)
-                {
-                }
-                Float(f32 min, f32 max)
-                    : m_min(min)
-                    , m_max(max)
-                {
-                }
+                Float() : m_min(0.0f), m_max(3.402823e+38f) {}
+                Float(f32 max) : m_min(0.0f), m_max(max) {}
+                Float(f32 min, f32 max) : m_min(min), m_max(max) {}
                 virtual bool Check(runes_reader_t&);
             };
 
@@ -491,16 +355,7 @@ namespace ncore
                 manipulators::Sequence m_ipv4;
 
             public:
-                IPv4()
-                    : m_d3(1, 3, filters::sDigit)
-                    , m_b8(255)
-                    , m_sub(m_d3, m_b8)
-                    , m_dot('.')
-                    , m_bad(m_sub, m_dot)
-                    , m_domain(3, m_bad)
-                    , m_ipv4(m_domain, m_sub)
-                {
-                }
+                IPv4() : m_d3(1, 3, filters::sDigit), m_b8(255), m_sub(m_d3, m_b8), m_dot('.'), m_bad(m_sub, m_dot), m_domain(3, m_bad), m_ipv4(m_domain, m_sub) {}
                 virtual bool Check(runes_reader_t&);
             };
             extern IPv4 sIPv4;
@@ -534,7 +389,6 @@ namespace ncore
             extern Uri sURI;
         } // namespace utils
     }     // namespace combparser
-
 
 } // namespace ncore
 

@@ -108,7 +108,7 @@ namespace ncore
 
         static void use_case_1()
         {
-            alloc_t* alloc = alloc_t::get_system();
+            alloc_t* alloc = context_t::heap_alloc();
             u8* data = (u8*)alloc->allocate(1024);
             buffer_t buffer(1024, data);
             parser_t p(buffer);

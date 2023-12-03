@@ -26,7 +26,7 @@ namespace ncore
         {
             bool Not::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t start = _reader.get_cursor();
+                u32 start = _reader.get_cursor();
                 if (!m_tokenizer_a.Check(_reader))
                 {
                     return true;
@@ -37,7 +37,7 @@ namespace ncore
 
             bool Or::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t start = _reader.get_cursor();
+                u32 start = _reader.get_cursor();
                 if (!m_tokenizer_a.Check(_reader))
                 {
                     _reader.set_cursor(start);
@@ -52,13 +52,13 @@ namespace ncore
 
             bool And::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t start = _reader.get_cursor();
+                u32 start = _reader.get_cursor();
                 if (!m_tokenizer_a.Check(_reader))
                 {
                     _reader.set_cursor(start);
                     return false;
                 }
-                crunes_t::ptr_t c1 = _reader.get_cursor();
+                u32 c1 = _reader.get_cursor();
 
                 _reader.set_cursor(start);
                 if (!m_tokenizer_b.Check(_reader))
@@ -66,16 +66,16 @@ namespace ncore
                     _reader.set_cursor(start);
                     return false;
                 }
-                crunes_t::ptr_t c2 = _reader.get_cursor();
+                u32 c2 = _reader.get_cursor();
 
-                crunes_t::ptr_t c = ((c2 < c1) ? c2 : c1);
+                u32 c = ((c2 < c1) ? c2 : c1);
                 _reader.set_cursor(c);
                 return true;
             }
 
             bool Sequence::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t start = _reader.get_cursor();
+                u32 start = _reader.get_cursor();
 
                 if (m_tokenizer_a.Check(_reader))
                 {
@@ -90,7 +90,7 @@ namespace ncore
 
             bool Sequence3::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t start = _reader.get_cursor();
+                u32 start = _reader.get_cursor();
                 if (m_tokenizer_a.Check(_reader))
                 {
                     if (m_tokenizer_b.Check(_reader))
@@ -107,7 +107,7 @@ namespace ncore
 
             bool Within::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t start = _reader.get_cursor();
+                u32 start = _reader.get_cursor();
 
                 u64 i = 0;
                 for (; i < m_max; i++)
@@ -137,11 +137,11 @@ namespace ncore
 
             bool Extract::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t start  = _reader.get_cursor();
+                u32 start  = _reader.get_cursor();
                 bool            result = m_tokenizer_a.Check(_reader);
                 if (result)
                 {
-                    crunes_t::ptr_t end = _reader.get_cursor();
+                    u32 end = _reader.get_cursor();
                     m_selection         = _reader.select(start, end);
                     return result;
                 }
@@ -151,7 +151,7 @@ namespace ncore
 
             bool ReturnToCallback::Check(runes_reader_t& _reader)
             {
-                crunes_t::ptr_t start  = _reader.get_cursor();
+                u32 start  = _reader.get_cursor();
                 bool            result = m_tokenizer_a.Check(_reader);
                 if (result)
                 {
@@ -239,7 +239,7 @@ namespace ncore
             {
                 m_input.reset();
 
-                crunes_t::ptr_t start = _reader.get_cursor();
+                u32 start = _reader.get_cursor();
                 while (m_input.valid())
                 {
                     uchar32 a = _reader.peek();
@@ -259,7 +259,7 @@ namespace ncore
             {
                 m_input.reset();
 
-                crunes_t::ptr_t start = _reader.get_cursor();
+                u32 start = _reader.get_cursor();
                 while (m_input.valid())
                 {
                     uchar32 a = _reader.peek();
@@ -300,7 +300,7 @@ namespace ncore
             bool Integer::Check(runes_reader_t& _reader)
             {
                 s64             value       = 0;
-                crunes_t::ptr_t start       = _reader.get_cursor();
+                u32 start       = _reader.get_cursor();
                 uchar32         c           = _reader.peek();
                 bool            is_negative = (c == '-');
                 if (is_negative)
@@ -328,7 +328,7 @@ namespace ncore
             bool Float::Check(runes_reader_t& _reader)
             {
                 f32             value       = 0.0f;
-                crunes_t::ptr_t start       = _reader.get_cursor();
+                u32 start       = _reader.get_cursor();
                 uchar32         c           = _reader.peek();
                 bool            is_negative = c == '-';
                 if (is_negative)

@@ -2,7 +2,7 @@
 #define __CTEXT_STREAM_H__
 #include "ccore/c_target.h"
 #ifdef USE_PRAGMA_ONCE
-#pragma once
+#    pragma once
 #endif
 
 #include "cbase/c_runes.h"
@@ -30,22 +30,22 @@ namespace ncore
         void close() { vclose(); }
 
     protected:
-        istream_t*      m_stream;
-        s64             m_stream_pos;
-        u64             m_stream_len;
-        u8*             m_buffer_data;
-        u8 const*       m_buffer_data0;
-        s64             m_buffer_cap;
-        s64             m_buffer_size;
-        crunes_t        m_buffer_text;
-        crunes_t::ptr_t m_buffer_text_cursor;
+        istream_t* m_stream;
+        s64        m_stream_pos;
+        u64        m_stream_len;
+        u8*        m_buffer_data;
+        u8 const*  m_buffer_data0;
+        s64        m_buffer_cap;
+        s64        m_buffer_size;
+        crunes_t   m_buffer_text;
+        u32        m_buffer_text_cursor;
 
         bool determineLine(crunes_t& line);
 
         virtual bool vcanSeek() const;
         virtual bool vcanRead() const;
         virtual bool vcanWrite() const;
-        virtual bool vcanZeroCopy() const;
+        virtual bool vcanView() const;
         virtual void vflush();
         virtual void vclose();
         virtual u64  vgetLength() const;
@@ -53,7 +53,7 @@ namespace ncore
         virtual s64  vsetPos(s64 pos);
         virtual s64  vgetPos() const;
         virtual s64  vread(u8* buffer, s64 count);
-        virtual s64  vread0(u8 const*& buffer, s64 count);
+        virtual s64  vview(u8 const*& buffer, s64 count);
         virtual s64  vwrite(const u8* buffer, s64 count);
     };
 
