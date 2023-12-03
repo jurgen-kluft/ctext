@@ -38,9 +38,8 @@ namespace ncore
         s64        m_buffer_cap;
         s64        m_buffer_size;
         crunes_t   m_buffer_text;
-        u32        m_buffer_text_cursor;
 
-        bool determineLine(crunes_t& line);
+        bool grabLine(crunes_t& line);
 
         virtual bool vcanSeek() const;
         virtual bool vcanRead() const;
