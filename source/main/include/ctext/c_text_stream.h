@@ -10,7 +10,7 @@
 
 namespace ncore
 {
-    class crunes_t;
+    struct crunes_t;
 
     class text_stream_t : protected istream_t
     {
@@ -35,8 +35,8 @@ namespace ncore
         u64        m_stream_len;
         u8*        m_buffer_data;
         u8 const*  m_buffer_data0;
-        s64        m_buffer_cap;
-        s64        m_buffer_size;
+        u32        m_buffer_cap;
+        u32        m_buffer_size;
         crunes_t   m_buffer_text;
 
         bool grabLine(crunes_t& line);

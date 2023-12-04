@@ -156,7 +156,7 @@ namespace ncore
                     str.set_type(str_type);
                     str.m_ascii.m_bos = str_begin;
                     str.m_ascii.m_str = 0;
-                    str.m_ascii.m_eos = str_end - str_begin;
+                    str.m_ascii.m_eos = (u32)(str_end - str_begin);
                     str.m_ascii.m_end = str.m_ascii.m_eos;
                     return str;
                 }

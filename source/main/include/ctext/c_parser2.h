@@ -13,7 +13,7 @@ namespace ncore
 {
     namespace xparser2
     {
-        struct machine_t;
+        class machine_t;
 
         class parser_t
         {

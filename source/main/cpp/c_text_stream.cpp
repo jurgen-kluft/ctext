@@ -62,7 +62,7 @@ namespace ncore
                         m_buffer_text.m_ascii.m_bos = (ascii::pcrune)m_buffer_data0;
                         m_buffer_text.m_ascii.m_str = 0;
                         m_buffer_text.m_ascii.m_eos = m_buffer_cap;
-                        m_buffer_text.m_ascii.m_end = read;
+                        m_buffer_text.m_ascii.m_end = (u32)read;
                         m_stream_pos                = read;
                         m_stream_len                = m_stream->getLength();
                     }
@@ -72,7 +72,7 @@ namespace ncore
                         m_buffer_size = 0;
                         m_stream_pos  = 0;
                         m_stream_len  = m_stream->getLength();
-                        m_buffer_size = m_stream->read(m_buffer_data, m_buffer_cap);
+                        m_buffer_size = (u32)m_stream->read(m_buffer_data, m_buffer_cap);
                         m_stream_pos += m_buffer_size;
                     }
                 }
@@ -98,14 +98,8 @@ namespace ncore
                         m_buffer_size               = 0;
                         m_buffer_text.m_ascii.m_bos = (ascii::pcrune)m_buffer_data0;
                         m_buffer_text.m_ascii.m_str = 0;
-                        m_buffer_text.m_ascii.m_end = read;
-                        m_buffer_text.m_ascii.m_eos = read;
-
-                        line.m_ascii.m_bos = (ascii::pcrune)m_buffer_data0;
-                        line.m_ascii.m_str = 0;
-                        line.m_ascii.m_end = read;
-                        line.m_ascii.m_eos = read;
-                        return true;
+                        m_buffer_text.m_ascii.m_end = (u32)read;
+                        m_buffer_text.m_ascii.m_eos = (u32)read;
                     }
                 }
                 else
@@ -124,7 +118,7 @@ namespace ncore
                     s64 const read_actual_size  = m_stream->read(dst, read_request_size);
                     if (read_actual_size >= 0)
                     {
-                        m_buffer_size += read_actual_size;
+                        m_buffer_size += (u32)read_actual_size;
                         m_stream_pos += read_actual_size;
                     }
                     else
