@@ -2,7 +2,7 @@
 #define __CTEXT_XPARSER3_H__
 #include "ccore/c_target.h"
 #ifdef USE_PRAGMA_ONCE
-#pragma once
+#    pragma once
 #endif
 
 #include "cbase/c_buffer.h"
@@ -16,7 +16,7 @@ namespace ncore
         // Minimal parser interface / API
         /*
             e.g.
-         
+
             auto rule2 = p.Sequence(
                 p.Digest(p.cWHITESPACE)->
                 p.Until(p.Is('=')))->
@@ -42,12 +42,12 @@ namespace ncore
 
         struct parser_t
         {
-            // Call parser_t when starting a new code block. 
+            // Call parser_t when starting a new code block.
             // You will not be able to write any additional commands to this block when it has been
             // handed to another code block as input. From that moment on this code-block will be locked.
             struct code_t
             {
-                code_t* Extract(va_r_t * var, code_t* lhs);
+                code_t* Extract(va_r_t* var, code_t* lhs);
                 code_t* Not(code_t* lhs);
                 code_t* Or(code_t* lhs, code_t* rhs);
                 code_t* And(code_t* lhs, code_t* rhs);
@@ -69,7 +69,7 @@ namespace ncore
                 code_t* AlphaNumeric();
                 code_t* Exact(crunes_t const& _text);
                 code_t* Like(crunes_t const& _text);
-                code_t* WhiteSpace(u8 flags=cZeroOrMore);
+                code_t* WhiteSpace(u8 flags = cZeroOrMore);
                 code_t* Is(uchar32 _c);
                 code_t* Word();
                 code_t* EndOfText();
@@ -93,9 +93,9 @@ namespace ncore
 
             parser_t(buffer_t buffer);
 
-            bool Parse(runes_reader_t&);
+            bool Parse(nrunes::reader_t&);
 
-            code_t* Extract(va_r_t * var, code_t* lhs);
+            code_t* Extract(va_r_t* var, code_t* lhs);
             code_t* Not(code_t* lhs);
             code_t* Or(code_t* lhs, code_t* rhs);
             code_t* And(code_t* lhs, code_t* rhs);
@@ -117,7 +117,7 @@ namespace ncore
             code_t* AlphaNumeric();
             code_t* Exact(crunes_t const& _text);
             code_t* Like(crunes_t const& _text);
-            code_t* WhiteSpace(u8 flags=cZeroOrMore);
+            code_t* WhiteSpace(u8 flags = cZeroOrMore);
             code_t* Is(uchar32 _c);
             code_t* Word();
             code_t* EndOfText();

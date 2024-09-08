@@ -59,7 +59,7 @@ namespace ncore
 
         parser_t::parser_t(buffer_t buffer) {}
 
-        bool parser_t::Parse(runes_reader_t&) { return false; }
+        bool parser_t::Parse(nrunes::reader_t&) { return false; }
 
         static parser_t::code_t sNullCode;
 
@@ -109,50 +109,25 @@ namespace ncore
         static void use_case_1()
         {
             alloc_t* alloc = context_t::heap_alloc();
-            u8* data = (u8*)alloc->allocate(1024);
-            buffer_t buffer(1024, data);
+            u8*      data  = (u8*)alloc->allocate(1024);
+            buffer_t buffer(data, data + 1024);
             parser_t p(buffer);
 
-            s32 idx;
-            s32 lints[8];
-            s32 rints[8];
+            s32    idx;
+            s32    lints[8];
+            s32    rints[8];
             va_r_t index(&idx);
             va_r_t lvars((s32*)lints, 8);
             va_r_t rvars((s32*)rints, 8);
             va_r_t r1c;
-            auto rule1 = p.Sequence(
-                p.Extract(&index, p.Integer32())->Is(':')->
-                WhiteSpace(cZeroOrMore)->
-                Or(
-                    p.Sequence(
-                        p.Is('"')->Extract(&r1c, p.Until(p.Is('"'), p.Any()))->
-                        WhiteSpace(cZeroOrMore)->
-                        EOL()
-                    ),
-                    p.Sequence(
-                        p.WhiteSpace(cZeroOrMore)->
-                        Until(p.Or(p.Is('|'), p.EOL()),
-                            p.Sequence(
-                                p.WhiteSpace(cZeroOrMore)->
-                                Extract(&lvars, p.Integer32())->
-                                WhiteSpace(cZeroOrMore)
-                            )
-                        )->
-                        Or(
-                            p.EOL(),
-                            p.Sequence(
-                                p.Until(p.EOL(),
-                                    p.Sequence(
-                                        p.WhiteSpace(cZeroOrMore)->
-                                        Extract(&rvars, p.Integer32())->
-                                        WhiteSpace(cZeroOrMore)
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            );
+            auto   rule1 =
+                p.Sequence(p.Extract(&index, p.Integer32())
+                               ->Is(':')
+                               ->WhiteSpace(cZeroOrMore)
+                               ->Or(p.Sequence(p.Is('"')->Extract(&r1c, p.Until(p.Is('"'), p.Any()))->WhiteSpace(cZeroOrMore)->EOL()),
+                                    p.Sequence(p.WhiteSpace(cZeroOrMore)
+                                                   ->Until(p.Or(p.Is('|'), p.EOL()), p.Sequence(p.WhiteSpace(cZeroOrMore)->Extract(&lvars, p.Integer32())->WhiteSpace(cZeroOrMore)))
+                                                   ->Or(p.EOL(), p.Sequence(p.Until(p.EOL(), p.Sequence(p.WhiteSpace(cZeroOrMore)->Extract(&rvars, p.Integer32())->WhiteSpace(cZeroOrMore))))))));
         }
     } // namespace parser3
 } // namespace ncore

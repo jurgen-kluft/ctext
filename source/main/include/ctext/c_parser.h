@@ -15,7 +15,7 @@ namespace ncore
         {
         public:
             /*!
-             * @fn 	bool Check(runes_reader_t&)
+             * @fn 	bool Check(nrunes::reader_t&)
              * Check if the string pointed by cursor is complying to this parsing rule
              * @param[in/out] cursor  A cursor to the parsing string, after successful
              * parsing, the cursor value should move to the last character as far as the
@@ -23,7 +23,7 @@ namespace ncore
              * @return  Return @a true if the parsing succeeds. Otherwise it returns false
              *
              */
-            virtual bool Check(runes_reader_t&) = 0;
+            virtual bool Check(nrunes::reader_t&) = 0;
         };
 
         class tokenizer_1_t : public tokenizer_t
@@ -50,28 +50,28 @@ namespace ncore
             {
             public:
                 inline Not(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Or : public tokenizer_2_t
             {
             public:
                 inline Or(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class And : public tokenizer_2_t
             {
             public:
                 And(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Sequence : public tokenizer_2_t
             {
             public:
                 inline Sequence(tokenizer_t& toka, tokenizer_t& tokb) : tokenizer_2_t(toka, tokb) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             class Sequence3 : public tokenizer_2_t
             {
@@ -79,7 +79,7 @@ namespace ncore
 
             public:
                 inline Sequence3(tokenizer_t& toka, tokenizer_t& tokb, tokenizer_t& tokc) : tokenizer_2_t(toka, tokb), m_tokenizer_c(tokc) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Within : public tokenizer_1_t
@@ -90,7 +90,7 @@ namespace ncore
                 Within(u64 min, u64 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_min(min), m_max(max) {}
                 Within(u64 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_min(0), m_max(max) {}
                 Within(tokenizer_t& toka) : tokenizer_1_t(toka), m_min(0), m_max(0xffffffffffffffffUL) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Times : public tokenizer_1_t
@@ -99,21 +99,21 @@ namespace ncore
 
             public:
                 inline Times(s32 max, tokenizer_t& toka) : tokenizer_1_t(toka), m_max(max) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class OneOrMore : public tokenizer_1_t
             {
             public:
                 inline OneOrMore(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class ZeroOrOne : public tokenizer_1_t
             {
             public:
                 inline ZeroOrOne(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             typedef ZeroOrOne Optional;
             typedef ZeroOrOne _0Or1;
@@ -122,7 +122,7 @@ namespace ncore
             {
             public:
                 inline While(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             typedef While ZeroOrMore;
 
@@ -130,36 +130,36 @@ namespace ncore
             {
             public:
                 inline Until(tokenizer_t& toka) : tokenizer_1_t(toka) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Extract : public tokenizer_1_t
             {
-                runes_reader_t& m_selection;
+                nrunes::reader_t& m_selection;
 
             public:
-                inline Extract(runes_reader_t& m1, tokenizer_t& toka) : tokenizer_1_t(toka), m_selection(m1) {}
-                virtual bool Check(runes_reader_t&);
+                inline Extract(nrunes::reader_t& m1, tokenizer_t& toka) : tokenizer_1_t(toka), m_selection(m1) {}
+                virtual bool Check(nrunes::reader_t&);
             };
 
-            typedef void (*CallBack)(runes_reader_t&, u32&);
+            typedef void (*CallBack)(nrunes::reader_t&, u32&);
             class ReturnToCallback : public tokenizer_1_t
             {
                 CallBack m_cb;
 
             public:
                 inline ReturnToCallback(CallBack cb, tokenizer_t& toka) : tokenizer_1_t(toka), m_cb(cb) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Enclosed : public tokenizer_1_t
             {
-                runes_reader_t m_open;
-                runes_reader_t m_close;
+                nrunes::reader_t m_open;
+                nrunes::reader_t m_close;
 
             public:
-                inline Enclosed(runes_reader_t open, runes_reader_t close, tokenizer_t& toka) : tokenizer_1_t(toka), m_open(open), m_close(close) {}
-                virtual bool Check(runes_reader_t&);
+                inline Enclosed(nrunes::reader_t open, nrunes::reader_t close, tokenizer_t& toka) : tokenizer_1_t(toka), m_open(open), m_close(close) {}
+                virtual bool Check(nrunes::reader_t&);
             };
 
         } // namespace manipulators
@@ -170,19 +170,19 @@ namespace ncore
             {
             public:
                 Any() {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern Any sAny;
 
             class In : public tokenizer_t
             {
-                runes_reader_t m_input;
+                nrunes::reader_t m_input;
 
             public:
                 In() {}
                 In(const char* str, u32 len) : m_input(str, str + len) {}
-                In(runes_reader_t input) : m_input(input) {}
-                virtual bool Check(runes_reader_t&);
+                In(nrunes::reader_t input) : m_input(input) {}
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Between : public tokenizer_t
@@ -193,7 +193,7 @@ namespace ncore
             public:
                 Between() : m_lower('a'), m_upper('z') {}
                 Between(uchar32 lower, uchar32 upper) : m_lower(lower), m_upper(upper) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Alphabet : public tokenizer_t
@@ -203,7 +203,7 @@ namespace ncore
 
             public:
                 Alphabet() : m_lower_case('a', 'z'), m_upper_case('A', 'Z') {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern Alphabet sAlphabet;
 
@@ -213,7 +213,7 @@ namespace ncore
 
             public:
                 Digit() : m_digit('0', '9') {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern Digit sDigit;
 
@@ -225,7 +225,7 @@ namespace ncore
 
             public:
                 Hex() : m_lower_case('a', 'f'), m_upper_case('A', 'F') {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern Hex sHex;
 
@@ -233,33 +233,33 @@ namespace ncore
             {
             public:
                 AlphaNumeric() {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern AlphaNumeric sAlphaNumeric;
 
             class Exact : public tokenizer_t
             {
-                runes_reader_t m_input;
+                nrunes::reader_t m_input;
 
             public:
                 Exact() {}
                 Exact(const char* str, u32 len) : m_input(str, str + len) {}
-                Exact(runes_reader_t input) : m_input(input) {}
-                virtual bool Check(runes_reader_t&);
+                Exact(nrunes::reader_t input) : m_input(input) {}
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Like : public tokenizer_t
             {
-                runes_reader_t m_input;
-                u32            m_from;
-                u32            m_to;
+                nrunes::reader_t m_input;
+                u32              m_from;
+                u32              m_to;
 
             public:
                 Like() {}
-                Like(runes_reader_t input) : m_input(input) {}
-                Like(runes_reader_t input, u32 to) : m_input(input), m_to(to) {}
-                Like(runes_reader_t input, u32 from, u32 to) : m_input(input), m_from(from), m_to(to) {}
-                virtual bool Check(runes_reader_t&);
+                Like(nrunes::reader_t input) : m_input(input) {}
+                Like(nrunes::reader_t input, u32 to) : m_input(input), m_to(to) {}
+                Like(nrunes::reader_t input, u32 from, u32 to) : m_input(input), m_from(from), m_to(to) {}
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class WhiteSpace : public tokenizer_t
@@ -268,7 +268,7 @@ namespace ncore
 
             public:
                 WhiteSpace() : m_whitespace(" \t\n\r", 4) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern WhiteSpace sWhitespace;
 
@@ -279,14 +279,14 @@ namespace ncore
             public:
                 Is() : m_char(' ') {}
                 Is(uchar32 c) : m_char(c) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Decimal : public tokenizer_t
             {
             public:
                 Decimal() {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern Decimal sDecimal;
 
@@ -294,7 +294,7 @@ namespace ncore
             {
             public:
                 Word() {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern Word sWord;
 
@@ -302,7 +302,7 @@ namespace ncore
             {
             public:
                 EndOfText() {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern EndOfText sEOT;
 
@@ -310,7 +310,7 @@ namespace ncore
             {
             public:
                 EndOfLine() {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern EndOfLine sEOL;
 
@@ -323,7 +323,7 @@ namespace ncore
                 Integer() : m_min(0), m_max(0x7fffffffffffffffL) {}
                 Integer(s64 max) : m_min(0), m_max(max) {}
                 Integer(s64 min, s64 max) : m_min(min), m_max(max) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             class Float : public tokenizer_t
@@ -335,7 +335,7 @@ namespace ncore
                 Float() : m_min(0.0f), m_max(3.402823e+38f) {}
                 Float(f32 max) : m_min(0.0f), m_max(max) {}
                 Float(f32 min, f32 max) : m_min(min), m_max(max) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
 
             // namespace Date
@@ -356,39 +356,39 @@ namespace ncore
 
             public:
                 IPv4() : m_d3(1, 3, filters::sDigit), m_b8(255), m_sub(m_d3, m_b8), m_dot('.'), m_bad(m_sub, m_dot), m_domain(3, m_bad), m_ipv4(m_domain, m_sub) {}
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern IPv4 sIPv4;
 
             class Host : public tokenizer_t
             {
             public:
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern Host sHost;
 
             class Email : public tokenizer_t
             {
             public:
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern Email sEmail;
 
             class ServerAddress : public tokenizer_t
             {
             public:
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern ServerAddress sServerAddress;
 
             class Uri : public tokenizer_t
             {
             public:
-                virtual bool Check(runes_reader_t&);
+                virtual bool Check(nrunes::reader_t&);
             };
             extern Uri sURI;
         } // namespace utils
-    }     // namespace combparser
+    } // namespace combparser
 
 } // namespace ncore
 

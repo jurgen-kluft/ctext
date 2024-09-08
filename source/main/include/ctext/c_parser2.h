@@ -2,7 +2,7 @@
 #define __CTEXT_XPARSER2_H__
 #include "ccore/c_target.h"
 #ifdef USE_PRAGMA_ONCE
-#pragma once
+#    pragma once
 #endif
 
 #include "cbase/c_buffer.h"
@@ -11,7 +11,7 @@
 
 namespace ncore
 {
-    namespace xparser2
+    namespace parser2
     {
         class machine_t;
 
@@ -24,8 +24,8 @@ namespace ncore
             static const u8 cALPHABET   = 2;
             static const u8 cNUMERIC    = 4;
             static const u8 cIGNORECASE = 8;
-            static const u8 cLOWERCASE = 16;
-            static const u8 cUPPERCASE = 32;
+            static const u8 cLOWERCASE  = 16;
+            static const u8 cUPPERCASE  = 32;
 
             parser_t(buffer_t buffer);
 
@@ -76,14 +76,14 @@ namespace ncore
             protected:
                 friend class machine_t;
                 friend class parser_t;
-                inline pc_t pc() const { return (pc_t)m_pc; } 
-                
+                inline pc_t pc() const { return (pc_t)m_pc; }
+
             private:
                 machine_t* m_machine;
-                u32 m_pc;
+                u32        m_pc;
             };
 
-            static bool parse(program_t program, runes_reader_t& reader);
+            static bool parse(program_t program, nrunes::reader_t& reader);
 
             program_t Program(program_t p);
             program_t Not(program_t p);
@@ -129,10 +129,10 @@ namespace ncore
 
         private:
             machine_t* m_machine;
-            buffer_t m_buffer;
+            buffer_t   m_buffer;
         };
 
-    } // namespace xparser
+    } // namespace parser2
 } // namespace ncore
 
 #endif

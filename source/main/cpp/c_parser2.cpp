@@ -8,7 +8,7 @@
 
 namespace ncore
 {
-    namespace xparser2
+    namespace parser2
     {
         enum eOpcode
         {
@@ -66,17 +66,17 @@ namespace ncore
 
             struct operands_t
             {
-                static u16 write(binary_writer_t& writer, u16 opa) { return (u16)writer.write(opa); }
-                static u16 write(binary_writer_t& writer, u32 opa) { return (u16)writer.write(opa); }
-                static u16 write(binary_writer_t& writer, u32 opa, u32 opb)
+                static void write(binary_writer_t& writer, u16 opa) { writer.write(opa); }
+                static void write(binary_writer_t& writer, u32 opa) { writer.write(opa); }
+                static u16  write(binary_writer_t& writer, u32 opa, u32 opb)
                 {
                     u16 const offset = (u16)writer.pos();
                     writer.write(opa);
                     writer.write(opb);
                     return offset;
                 }
-                static u16 write(binary_writer_t& writer, s32 opa) { return (u16)writer.write(opa); }
-                static u16 write(binary_writer_t& writer, s32 opa, s32 opb)
+                static void write(binary_writer_t& writer, s32 opa) { writer.write(opa); }
+                static u16  write(binary_writer_t& writer, s32 opa, s32 opb)
                 {
                     u16 const offset = (u16)writer.pos();
                     writer.write(opa);
@@ -123,13 +123,13 @@ namespace ncore
                     writer.write((u64)var);
                     return offset;
                 }
-                static u16 write(binary_writer_t& writer, runes_reader_t const& reader)
+                static u16 write(binary_writer_t& writer, nrunes::reader_t const& reader)
                 {
                     crunes_t  r      = reader.get_current();
                     u16 const offset = (u16)writer.pos();
-                    writer.write((u8)r.get_type());
-                    writer.write(r.m_ascii.m_str);
-                    writer.write(r.m_ascii.m_end);
+                    writer.write(r.get_type());
+                    writer.write(r.m_ascii);
+                    writer.write(r.m_ascii + r.m_end);
                     return offset;
                 }
                 static s32     read_s32(binary_reader_t& reader) { return reader.read_s32(); }
@@ -148,31 +148,31 @@ namespace ncore
                 static crunes_t read_crunes(binary_reader_t& reader)
                 {
                     const char* str_begin = nullptr;
-                    const char* str_end = nullptr;
-                    s8 str_type = 0;
+                    const char* str_end   = nullptr;
+                    s8          str_type  = 0;
                     reader.view_string(str_begin, str_end, str_type);
 
                     crunes_t str;
                     str.set_type(str_type);
-                    str.m_ascii.m_bos = str_begin;
-                    str.m_ascii.m_str = 0;
-                    str.m_ascii.m_eos = (u32)(str_end - str_begin);
-                    str.m_ascii.m_end = str.m_ascii.m_eos;
+                    str.m_ascii = str_begin;
+                    str.m_str   = 0;
+                    str.m_eos   = (u32)(str_end - str_begin);
+                    str.m_end   = str.m_eos;
                     return str;
                 }
             };
 
-            runes_writer_t* get_writer(u32 channel) { return nullptr; }
+            nrunes::writer_t* get_writer(u32 channel) { return nullptr; }
 
             binary_writer_t m_code;
             binary_reader_t m_program;
 
             struct context_t
             {
-                context_t(runes_reader_t const& _reader) : reader(_reader) {}
-                u32            get_cursor() const { return reader.get_cursor(); }
-                void           set_cursor(u32 const& c) { reader.set_cursor(c); }
-                runes_reader_t reader;
+                context_t(nrunes::reader_t const& _reader) : reader(_reader) {}
+                u32              get_cursor() const { return reader.get_cursor(); }
+                void             set_cursor(u32 const& c) { reader.set_cursor(c); }
+                nrunes::reader_t reader;
             };
             typedef parser_t::pc_t pc_t;
 
@@ -191,7 +191,7 @@ namespace ncore
             {
                 emit_instr(o);
                 operands_t::write(m_code, (u8)runes.get_type());
-                operands_t::write(m_code, (u64)runes.m_ascii.m_str, (u64)runes.m_ascii.m_end);
+                operands_t::write(m_code, (u64)runes.m_ascii, (u64)runes.m_ascii + runes.m_end);
             }
             void emit_instr(eOpcode o, va_r_t var)
             {
@@ -261,14 +261,14 @@ namespace ncore
 
             bool fnAny(context_t& ctxt);
             bool fnDigest(context_t& ctxt, u8 flags);
-            bool fnIn(context_t& ctxt, runes_reader_t _chars);
+            bool fnIn(context_t& ctxt, nrunes::reader_t _chars);
             bool fnBetween(context_t& ctxt, uchar32 _from, uchar32 _until);
             bool fnAlphabet(context_t& ctxt);
             bool fnDigit(context_t& ctxt);
             bool fnHex(context_t& ctxt);
             bool fnAlphaNumeric(context_t& ctxt);
-            bool fnExact(context_t& ctxt, runes_reader_t _text); // Case-Sensitive
-            bool fnLike(context_t& ctxt, runes_reader_t _text);  // Case-Insensitive
+            bool fnExact(context_t& ctxt, nrunes::reader_t _text); // Case-Sensitive
+            bool fnLike(context_t& ctxt, nrunes::reader_t _text);  // Case-Insensitive
             bool fnWhiteSpace(context_t& ctxt);
             bool fnIs(context_t& ctxt, uchar32 _c);
             bool fnWord(context_t& ctxt);
@@ -288,7 +288,7 @@ namespace ncore
                 return parser_t::program_t(this, 0);
             }
 
-            bool execute(parser_t::program_t const& prog, runes_reader_t const& reader, u32& cursor)
+            bool execute(parser_t::program_t const& prog, nrunes::reader_t const& reader, u32& cursor)
             {
                 context_t ctxt(reader);
                 ctxt.reader.set_cursor(cursor);
@@ -777,7 +777,7 @@ namespace ncore
 
         parser_t::program_t parser_t::Email()
         {
-            crunes_t validchars((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 19);
+            crunes_t validchars((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 0, 19, 19);
 
             program_t email_program = Sequence(OneOrMore(Or(AlphaNumeric(), In(validchars))), ZeroOrMore(Sequence(Or(Is('.'), Is('_')), Or(AlphaNumeric(), In(validchars)))), Is('@'), Host());
             return email_program;
@@ -787,16 +787,16 @@ namespace ncore
         {
             // clang-format off
             program_t program = Sequence(
-                Times(3, 
-                    Sequence( 
-                        And( 
+                Times(3,
+                    Sequence(
+                        And(
                             Within(Digit(), 1,3), Unsigned32(0, 255)
-                        ), 
-                        Is('.') 
-                    ) 
+                        ),
+                        Is('.')
+                    )
                 ),
-                And( 
-                    Within(Digit(), 1,3), Unsigned32(0, 255) 
+                And(
+                    Within(Digit(), 1,3), Unsigned32(0, 255)
                 )
             );
             // clang-format on
@@ -1003,8 +1003,8 @@ namespace ncore
                 return false;
             }
 
-            runes_reader_t varreader = ctxt.reader.select(start, ctxt.get_cursor());
-            crunes_t       varrunes  = varreader.get_current();
+            nrunes::reader_t varreader = ctxt.reader.select(start, ctxt.get_cursor());
+            crunes_t         varrunes  = varreader.get_current();
             if (!varrunes.is_empty())
             {
                 *var = varrunes;
@@ -1052,23 +1052,23 @@ namespace ncore
                     {
                         if ((flags & parser_t::cIGNORECASE) == parser_t::cIGNORECASE)
                         {
-                            if (is_alpha(s))
+                            if (nrunes::is_alpha(s))
                                 break;
                         }
                         else if ((flags & parser_t::cLOWERCASE) == parser_t::cLOWERCASE)
                         {
-                            if (is_lower(s))
+                            if (nrunes::is_lower(s))
                                 break;
                         }
                         else if ((flags & parser_t::cUPPERCASE) == parser_t::cUPPERCASE)
                         {
-                            if (is_upper(s))
+                            if (nrunes::is_upper(s))
                                 break;
                         }
                     }
                     if ((flags & parser_t::cNUMERIC) == parser_t::cNUMERIC)
                     {
-                        if (is_digit(s))
+                        if (nrunes::is_digit(s))
                             break;
                     }
 
@@ -1078,7 +1078,7 @@ namespace ncore
             }
             return false;
         }
-        bool machine_t::fnIn(context_t& ctxt, runes_reader_t _chars)
+        bool machine_t::fnIn(context_t& ctxt, nrunes::reader_t _chars)
         {
             _chars.reset();
             u32           ccursor = _chars.get_cursor();
@@ -1141,7 +1141,7 @@ namespace ncore
             }
             return false;
         }
-        bool machine_t::fnExact(context_t& ctxt, runes_reader_t _text)
+        bool machine_t::fnExact(context_t& ctxt, nrunes::reader_t _text)
         {
             _text.reset();
             u32 tcursor = _text.get_cursor();
@@ -1158,7 +1158,7 @@ namespace ncore
             }
             return true;
         }
-        bool machine_t::fnLike(context_t& ctxt, runes_reader_t _text)
+        bool machine_t::fnLike(context_t& ctxt, nrunes::reader_t _text)
         {
             _text.reset();
             u32 tcursor = _text.get_cursor();
@@ -1167,7 +1167,7 @@ namespace ncore
             {
                 uchar32 const s = ctxt.reader.peek();
                 uchar32 const c = _text.read();
-                if (c != s && to_lower(c) != to_lower(c))
+                if (c != s && nrunes::to_lower(c) != nrunes::to_lower(c))
                 {
                     ctxt.set_cursor(cursor);
                     return false;
@@ -1240,7 +1240,7 @@ namespace ncore
                 uchar32 c = ctxt.reader.peek();
                 if (!(c >= '0' && c <= '9'))
                     break;
-                value = (value * 10) + to_digit(c);
+                value = (value * 10) + nrunes::to_digit(c);
                 ctxt.reader.skip();
             }
 
@@ -1272,7 +1272,7 @@ namespace ncore
                 c = ctxt.reader.peek();
                 if (!(c >= '0' && c <= '9'))
                     break;
-                value = (value * 10) + to_digit(c);
+                value = (value * 10) + nrunes::to_digit(c);
                 ctxt.reader.skip();
             }
             if (cursor == ctxt.get_cursor())
@@ -1301,9 +1301,9 @@ namespace ncore
             while (ctxt.reader.valid())
             {
                 c = ctxt.reader.peek();
-                if (!is_digit(c))
+                if (!nrunes::is_digit(c))
                     break;
-                value = (value * 10.0) + to_digit(c);
+                value = (value * 10.0) + nrunes::to_digit(c);
             }
             if (c == '.')
             {
@@ -1312,9 +1312,9 @@ namespace ncore
                 while (ctxt.reader.valid())
                 {
                     c = ctxt.reader.peek();
-                    if (!is_digit(c))
+                    if (!nrunes::is_digit(c))
                         break;
-                    value = value + f64(to_digit(c)) / mantissa;
+                    value = value + f64(nrunes::to_digit(c)) / mantissa;
                     mantissa *= 10.0;
                 }
             }
@@ -1334,15 +1334,15 @@ namespace ncore
         void use_case_parser2()
         {
             u8       buffer[1024 + 1];
-            parser_t parser(buffer_t(1024, buffer));
+            parser_t parser(buffer_t(buffer, buffer + 1024));
 
             // For examples see:
             // - parser_t::Email()
             // - parser_t::IPv4()
             parser_t::program_t prog = parser.Email();
 
-            runes_reader_t reader("john.doe@hotmail.com");
-            bool           result = parser.parse(prog, reader);
+            nrunes::reader_t reader("john.doe@hotmail.com");
+            bool             result = parser.parse(prog, reader);
             // result == true !
         }
 
@@ -1357,7 +1357,7 @@ namespace ncore
             m_machine->initialize(work_buffer);
         }
 
-        bool parser_t::parse(program_t program, runes_reader_t& reader)
+        bool parser_t::parse(program_t program, nrunes::reader_t& reader)
         {
             u32        cursor = reader.get_cursor();
             machine_t* m      = program.m_machine;
@@ -1369,6 +1369,6 @@ namespace ncore
             return false;
         }
 
-    } // namespace xparser2
+    } // namespace parser2
 
 } // namespace ncore

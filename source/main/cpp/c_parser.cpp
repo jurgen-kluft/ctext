@@ -24,7 +24,7 @@ namespace ncore
 
         namespace manipulators
         {
-            bool Not::Check(runes_reader_t& _reader)
+            bool Not::Check(nrunes::reader_t& _reader)
             {
                 u32 start = _reader.get_cursor();
                 if (!m_tokenizer_a.Check(_reader))
@@ -35,7 +35,7 @@ namespace ncore
                 return false;
             }
 
-            bool Or::Check(runes_reader_t& _reader)
+            bool Or::Check(nrunes::reader_t& _reader)
             {
                 u32 start = _reader.get_cursor();
                 if (!m_tokenizer_a.Check(_reader))
@@ -50,7 +50,7 @@ namespace ncore
                 return true;
             }
 
-            bool And::Check(runes_reader_t& _reader)
+            bool And::Check(nrunes::reader_t& _reader)
             {
                 u32 start = _reader.get_cursor();
                 if (!m_tokenizer_a.Check(_reader))
@@ -73,7 +73,7 @@ namespace ncore
                 return true;
             }
 
-            bool Sequence::Check(runes_reader_t& _reader)
+            bool Sequence::Check(nrunes::reader_t& _reader)
             {
                 u32 start = _reader.get_cursor();
 
@@ -88,7 +88,7 @@ namespace ncore
                 return false;
             }
 
-            bool Sequence3::Check(runes_reader_t& _reader)
+            bool Sequence3::Check(nrunes::reader_t& _reader)
             {
                 u32 start = _reader.get_cursor();
                 if (m_tokenizer_a.Check(_reader))
@@ -105,7 +105,7 @@ namespace ncore
                 return false;
             }
 
-            bool Within::Check(runes_reader_t& _reader)
+            bool Within::Check(nrunes::reader_t& _reader)
             {
                 u32 start = _reader.get_cursor();
 
@@ -125,34 +125,34 @@ namespace ncore
                 return false;
             }
 
-            bool Times::Check(runes_reader_t& _reader) { return Within(m_max, m_max, m_tokenizer_a).Check(_reader); }
-            bool OneOrMore::Check(runes_reader_t& _reader) { return Within(1, -1, m_tokenizer_a).Check(_reader); }
-            bool ZeroOrOne::Check(runes_reader_t& _reader) { return Within(0, 1, m_tokenizer_a).Check(_reader); }
-            bool While::Check(runes_reader_t& _reader) { return Within(0, -1, m_tokenizer_a).Check(_reader); }
-            bool Until::Check(runes_reader_t& _reader)
+            bool Times::Check(nrunes::reader_t& _reader) { return Within(m_max, m_max, m_tokenizer_a).Check(_reader); }
+            bool OneOrMore::Check(nrunes::reader_t& _reader) { return Within(1, -1, m_tokenizer_a).Check(_reader); }
+            bool ZeroOrOne::Check(nrunes::reader_t& _reader) { return Within(0, 1, m_tokenizer_a).Check(_reader); }
+            bool While::Check(nrunes::reader_t& _reader) { return Within(0, -1, m_tokenizer_a).Check(_reader); }
+            bool Until::Check(nrunes::reader_t& _reader)
             {
                 Not n(m_tokenizer_a);
                 return (While(n)).Check(_reader);
             }
 
-            bool Extract::Check(runes_reader_t& _reader)
+            bool Extract::Check(nrunes::reader_t& _reader)
             {
-                u32 start  = _reader.get_cursor();
-                bool            result = m_tokenizer_a.Check(_reader);
+                u32  start  = _reader.get_cursor();
+                bool result = m_tokenizer_a.Check(_reader);
                 if (result)
                 {
-                    u32 end = _reader.get_cursor();
-                    m_selection         = _reader.select(start, end);
+                    u32 end     = _reader.get_cursor();
+                    m_selection = _reader.select(start, end);
                     return result;
                 }
                 _reader.set_cursor(start);
                 return result;
             }
 
-            bool ReturnToCallback::Check(runes_reader_t& _reader)
+            bool ReturnToCallback::Check(nrunes::reader_t& _reader)
             {
-                u32 start  = _reader.get_cursor();
-                bool            result = m_tokenizer_a.Check(_reader);
+                u32  start  = _reader.get_cursor();
+                bool result = m_tokenizer_a.Check(_reader);
                 if (result)
                 {
                     m_cb(_reader, start);
@@ -161,7 +161,7 @@ namespace ncore
                 return result;
             }
 
-            bool Enclosed::Check(runes_reader_t& _reader)
+            bool Enclosed::Check(nrunes::reader_t& _reader)
             {
                 filters::Exact open(m_open);
                 filters::Exact close(m_close);
@@ -173,7 +173,7 @@ namespace ncore
 
         namespace filters
         {
-            bool Any::Check(runes_reader_t& _reader)
+            bool Any::Check(nrunes::reader_t& _reader)
             {
                 if (!_reader.valid())
                     return false;
@@ -181,7 +181,7 @@ namespace ncore
                 return true;
             }
 
-            bool In::Check(runes_reader_t& _reader)
+            bool In::Check(nrunes::reader_t& _reader)
             {
                 if (!_reader.valid())
                     return false;
@@ -201,7 +201,7 @@ namespace ncore
                 return false;
             }
 
-            bool Between::Check(runes_reader_t& _reader)
+            bool Between::Check(nrunes::reader_t& _reader)
             {
                 uchar32 c = _reader.peek();
                 if (c >= m_lower && c <= m_upper)
@@ -212,9 +212,9 @@ namespace ncore
                 return false;
             }
 
-            bool Alphabet::Check(runes_reader_t& _reader) { return (m_lower_case.Check(_reader) || m_upper_case.Check(_reader)); }
-            bool Digit::Check(runes_reader_t& _reader) { return m_digit.Check(_reader); }
-            bool Hex::Check(runes_reader_t& _reader)
+            bool Alphabet::Check(nrunes::reader_t& _reader) { return (m_lower_case.Check(_reader) || m_upper_case.Check(_reader)); }
+            bool Digit::Check(nrunes::reader_t& _reader) { return m_digit.Check(_reader); }
+            bool Hex::Check(nrunes::reader_t& _reader)
             {
                 if (!m_digit.Check(_reader))
                 {
@@ -229,13 +229,13 @@ namespace ncore
                 return true;
             }
 
-            bool AlphaNumeric::Check(runes_reader_t& _reader)
+            bool AlphaNumeric::Check(nrunes::reader_t& _reader)
             {
                 manipulators::Or r(sAlphabet, sDigit);
                 return r.Check(_reader);
             }
 
-            bool Exact::Check(runes_reader_t& _reader)
+            bool Exact::Check(nrunes::reader_t& _reader)
             {
                 m_input.reset();
 
@@ -255,7 +255,7 @@ namespace ncore
                 return true;
             }
 
-            bool Like::Check(runes_reader_t& _reader)
+            bool Like::Check(nrunes::reader_t& _reader)
             {
                 m_input.reset();
 
@@ -264,7 +264,7 @@ namespace ncore
                 {
                     uchar32 a = _reader.peek();
                     uchar32 b = m_input.peek();
-                    if (a != b && (to_lower(a) != to_lower(b)))
+                    if (a != b && (nrunes::to_lower(a) != nrunes::to_lower(b)))
                     {
                         _reader.set_cursor(start);
                         return false;
@@ -275,9 +275,9 @@ namespace ncore
                 return true;
             }
 
-            bool WhiteSpace::Check(runes_reader_t& _reader) { return m_whitespace.Check(_reader); }
+            bool WhiteSpace::Check(nrunes::reader_t& _reader) { return m_whitespace.Check(_reader); }
 
-            bool Is::Check(runes_reader_t& _reader)
+            bool Is::Check(nrunes::reader_t& _reader)
             {
                 if (_reader.peek() == m_char)
                 {
@@ -287,30 +287,30 @@ namespace ncore
                 return false;
             }
 
-            bool Decimal::Check(runes_reader_t& _reader) { return manipulators::OneOrMore(sDigit).Check(_reader); }
-            bool Word::Check(runes_reader_t& _reader) { return manipulators::OneOrMore(sAlphabet).Check(_reader); }
-            bool EndOfText::Check(runes_reader_t& _reader) { return (_reader.peek() == ('\0')); }
+            bool Decimal::Check(nrunes::reader_t& _reader) { return manipulators::OneOrMore(sDigit).Check(_reader); }
+            bool Word::Check(nrunes::reader_t& _reader) { return manipulators::OneOrMore(sAlphabet).Check(_reader); }
+            bool EndOfText::Check(nrunes::reader_t& _reader) { return (_reader.peek() == ('\0')); }
 
 #if defined(PLATFORM_PC)
-            bool EndOfLine::Check(runes_reader_t& _reader) { return Exact("\r\n", 2).Check(_reader); }
+            bool EndOfLine::Check(nrunes::reader_t& _reader) { return Exact("\r\n", 2).Check(_reader); }
 #else
-            bool EndOfLine::Check(runes_reader_t& _reader) { return Exact("\n", 1).Check(_reader); }
+            bool EndOfLine::Check(nrunes::reader_t& _reader) { return Exact("\n", 1).Check(_reader); }
 #endif
 
-            bool Integer::Check(runes_reader_t& _reader)
+            bool Integer::Check(nrunes::reader_t& _reader)
             {
-                s64             value       = 0;
-                u32 start       = _reader.get_cursor();
-                uchar32         c           = _reader.peek();
-                bool            is_negative = (c == '-');
+                s64     value       = 0;
+                u32     start       = _reader.get_cursor();
+                uchar32 c           = _reader.peek();
+                bool    is_negative = (c == '-');
                 if (is_negative)
                     _reader.skip();
                 while (_reader.valid())
                 {
                     c = _reader.peek();
-                    if (!is_digit(c))
+                    if (!nrunes::is_digit(c))
                         break;
-                    value = (value * 10) + to_digit(c);
+                    value = (value * 10) + nrunes::to_digit(c);
                     _reader.skip();
                 }
                 if (start == _reader.get_cursor())
@@ -325,20 +325,20 @@ namespace ncore
                 return false;
             }
 
-            bool Float::Check(runes_reader_t& _reader)
+            bool Float::Check(nrunes::reader_t& _reader)
             {
-                f32             value       = 0.0f;
-                u32 start       = _reader.get_cursor();
-                uchar32         c           = _reader.peek();
-                bool            is_negative = c == '-';
+                f32     value       = 0.0f;
+                u32     start       = _reader.get_cursor();
+                uchar32 c           = _reader.peek();
+                bool    is_negative = c == '-';
                 if (is_negative)
                     _reader.skip();
                 while (_reader.valid())
                 {
                     c = _reader.peek();
-                    if (!is_digit(c))
+                    if (!nrunes::is_digit(c))
                         break;
-                    value = (value * 10) + to_digit(c);
+                    value = (value * 10) + nrunes::to_digit(c);
                 }
                 if (c == '.')
                 {
@@ -347,9 +347,9 @@ namespace ncore
                     while (_reader.valid())
                     {
                         c = _reader.peek();
-                        if (!is_digit(c))
+                        if (!nrunes::is_digit(c))
                             break;
-                        value = value + f32(to_digit(c)) / mantissa;
+                        value = value + f32(nrunes::to_digit(c)) / mantissa;
                         mantissa *= 10.0f;
                     }
                 }
@@ -371,9 +371,9 @@ namespace ncore
             using namespace manipulators;
             using namespace filters;
 
-            bool IPv4::Check(runes_reader_t& _reader) { return m_ipv4.Check(_reader); }
+            bool IPv4::Check(nrunes::reader_t& _reader) { return m_ipv4.Check(_reader); }
 
-            bool Host::Check(runes_reader_t& _reader)
+            bool Host::Check(nrunes::reader_t& _reader)
             {
                 if (sIPv4.Check(_reader))
                 {
@@ -394,7 +394,7 @@ namespace ncore
 
             static const char* sValidEmailUriChars = "!#$%&'*+/=?^_`{|}~-";
 
-            bool Email::Check(runes_reader_t& _reader)
+            bool Email::Check(nrunes::reader_t& _reader)
             {
                 In         validchars(sValidEmailUriChars, 19);
                 Or         valid(sAlphaNumeric, validchars);
@@ -409,11 +409,11 @@ namespace ncore
                 return email.Check(_reader);
             }
 
-            bool ServerAddress::Check(runes_reader_t& _reader) { return false; }
+            bool ServerAddress::Check(nrunes::reader_t& _reader) { return false; }
 
-            bool Uri::Check(runes_reader_t& _reader) { return false; }
+            bool Uri::Check(nrunes::reader_t& _reader) { return false; }
 
         } // namespace utils
-    }     // namespace combparser
+    } // namespace combparser
 
 } // namespace ncore

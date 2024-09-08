@@ -28,23 +28,23 @@ namespace ncore
 
     bool text_stream_t::grabLine(crunes_t& line)
     {
-        line.m_ascii.m_bos = m_buffer_text.m_ascii.m_bos;
-        line.m_ascii.m_str = m_buffer_text.m_ascii.m_str;
-        line.m_ascii.m_end = m_buffer_text.m_ascii.m_end;
-        line.m_ascii.m_eos = m_buffer_text.m_ascii.m_eos;
+        line.m_ascii = m_buffer_text.m_ascii;
+        line.m_str   = m_buffer_text.m_str;
+        line.m_end   = m_buffer_text.m_end;
+        line.m_eos   = m_buffer_text.m_eos;
 
         u32 const chars = find_eol(line);
         if (chars > 0)
         {
-            m_buffer_text.m_ascii.m_str += chars;
-            line.m_ascii.m_end = m_buffer_text.m_ascii.m_str;
+            m_buffer_text.m_str += chars;
+            line.m_end = m_buffer_text.m_str;
             return true;
         }
 
         // Something going wrong
-        line.m_ascii.m_str = m_buffer_text.m_ascii.m_eos;
-        line.m_ascii.m_end = m_buffer_text.m_ascii.m_eos;
-        line.m_ascii.m_eos = m_buffer_text.m_ascii.m_eos;
+        line.m_str = m_buffer_text.m_eos;
+        line.m_end = m_buffer_text.m_eos;
+        line.m_eos = m_buffer_text.m_eos;
         return false;
     }
 
@@ -58,13 +58,13 @@ namespace ncore
                 {
                     if (m_stream->canView())
                     {
-                        s64 read                    = m_stream->view(m_buffer_data0, m_buffer_cap);
-                        m_buffer_text.m_ascii.m_bos = (ascii::pcrune)m_buffer_data0;
-                        m_buffer_text.m_ascii.m_str = 0;
-                        m_buffer_text.m_ascii.m_eos = m_buffer_cap;
-                        m_buffer_text.m_ascii.m_end = (u32)read;
-                        m_stream_pos                = read;
-                        m_stream_len                = m_stream->getLength();
+                        s64 read              = m_stream->view(m_buffer_data0, m_buffer_cap);
+                        m_buffer_text.m_ascii = (ascii::pcrune)m_buffer_data0;
+                        m_buffer_text.m_str   = 0;
+                        m_buffer_text.m_eos   = m_buffer_cap;
+                        m_buffer_text.m_end   = (u32)read;
+                        m_stream_pos          = read;
+                        m_stream_len          = m_stream->getLength();
                     }
                     else
                     {
@@ -82,7 +82,7 @@ namespace ncore
                 // Could not find EOL or EOF or there is no text left to scan
                 if (m_stream->canView())
                 {
-                    s64 const rest = m_buffer_text.m_ascii.m_end - m_buffer_text.m_ascii.m_str;
+                    s64 const rest = m_buffer_text.m_end - m_buffer_text.m_str;
                     m_stream_pos   = m_stream->getPos();
                     m_stream_pos -= rest;
                     m_stream->setPos(m_stream_pos);
@@ -95,11 +95,11 @@ namespace ncore
                     }
                     else
                     {
-                        m_buffer_size               = 0;
-                        m_buffer_text.m_ascii.m_bos = (ascii::pcrune)m_buffer_data0;
-                        m_buffer_text.m_ascii.m_str = 0;
-                        m_buffer_text.m_ascii.m_end = (u32)read;
-                        m_buffer_text.m_ascii.m_eos = (u32)read;
+                        m_buffer_size         = 0;
+                        m_buffer_text.m_ascii = (ascii::pcrune)m_buffer_data0;
+                        m_buffer_text.m_str   = 0;
+                        m_buffer_text.m_end   = (u32)read;
+                        m_buffer_text.m_eos   = (u32)read;
                     }
                 }
                 else
@@ -107,8 +107,8 @@ namespace ncore
                     // Currently we are at the following position in our text buffer
 
                     // Move the 'rest' to the beginning of our buffer and join it with new data
-                    ascii::pcrune src = m_buffer_text.m_ascii.m_bos + m_buffer_text.m_ascii.m_str;
-                    ascii::pcrune end = m_buffer_text.m_ascii.m_bos + m_buffer_text.m_ascii.m_end;
+                    ascii::pcrune src = m_buffer_text.m_ascii + m_buffer_text.m_str;
+                    ascii::pcrune end = m_buffer_text.m_ascii + m_buffer_text.m_end;
                     u8*           dst = (u8*)m_buffer_data;
                     while (src < end)
                         *dst++ = *src++;
@@ -128,10 +128,10 @@ namespace ncore
                     }
 
                     // Adjust our m_buffer_text
-                    m_buffer_text.m_ascii.m_bos = (ascii::pcrune)m_buffer_data;
-                    m_buffer_text.m_ascii.m_eos = m_buffer_size;
-                    m_buffer_text.m_ascii.m_str = 0;
-                    m_buffer_text.m_ascii.m_end = m_buffer_size;
+                    m_buffer_text.m_ascii = (ascii::pcrune)m_buffer_data;
+                    m_buffer_text.m_eos   = m_buffer_size;
+                    m_buffer_text.m_str   = 0;
+                    m_buffer_text.m_end   = m_buffer_size;
                 }
             }
 
