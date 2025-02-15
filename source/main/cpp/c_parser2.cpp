@@ -127,7 +127,7 @@ namespace ncore
                 {
                     crunes_t  r      = reader.get_current();
                     u16 const offset = (u16)writer.pos();
-                    writer.write(r.get_type());
+                    writer.write(r.m_type);
                     writer.write(r.m_ascii);
                     writer.write(r.m_ascii + r.m_end);
                     return offset;
@@ -153,7 +153,7 @@ namespace ncore
                     reader.view_string(str_begin, str_end, str_type);
 
                     crunes_t str;
-                    str.set_type(str_type);
+                    str.m_type = str_type;
                     str.m_ascii = str_begin;
                     str.m_str   = 0;
                     str.m_eos   = (u32)(str_end - str_begin);
@@ -190,7 +190,7 @@ namespace ncore
             void emit_instr(eOpcode o, crunes_t const& runes)
             {
                 emit_instr(o);
-                operands_t::write(m_code, (u8)runes.get_type());
+                operands_t::write(m_code, (u8)runes.m_type);
                 operands_t::write(m_code, (u64)runes.m_ascii, (u64)runes.m_ascii + runes.m_end);
             }
             void emit_instr(eOpcode o, va_r_t var)
@@ -284,7 +284,7 @@ namespace ncore
 
             parser_t::program_t initialize(buffer_t buffer)
             {
-                m_code = buffer;
+                m_code = binary_writer_t(buffer.m_begin, buffer.m_end);
                 return parser_t::program_t(this, 0);
             }
 
@@ -293,7 +293,7 @@ namespace ncore
                 context_t ctxt(reader);
                 ctxt.reader.set_cursor(cursor);
                 buffer_t code = m_code.get_current_buffer();
-                m_program     = binary_reader_t(code);
+                m_program     = binary_reader_t(code.m_begin, code.m_end);
                 m_program.seek(prog.pc());
                 if (fnExec(ctxt))
                 {
@@ -777,7 +777,7 @@ namespace ncore
 
         parser_t::program_t parser_t::Email()
         {
-            crunes_t validchars((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 0, 19, 19);
+            crunes_t validchars = make_crunes((ascii::pcrune) "!#$%&'*+/=?^_`{|}~-", 0, 19, 19);
 
             program_t email_program = Sequence(OneOrMore(Or(AlphaNumeric(), In(validchars))), ZeroOrMore(Sequence(Or(Is('.'), Is('_')), Or(AlphaNumeric(), In(validchars)))), Is('@'), Host());
             return email_program;
@@ -1005,7 +1005,7 @@ namespace ncore
 
             nrunes::reader_t varreader = ctxt.reader.select(start, ctxt.get_cursor());
             crunes_t         varrunes  = varreader.get_current();
-            if (!varrunes.is_empty())
+            if (!is_empty(varrunes))
             {
                 *var = varrunes;
             }

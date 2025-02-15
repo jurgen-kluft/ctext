@@ -1,5 +1,5 @@
 #include "cbase/c_allocator.h"
-#include "cbase/c_stream.h"
+#include "ccore/c_stream.h"
 #include "cbase/c_runes.h"
 #include "ctext/c_text_stream.h"
 #include "cunittest/cunittest.h"
@@ -19,21 +19,39 @@ namespace ncore
         mem_stream(u8 const* data, uint_t length) : m_buffer(data), m_size(length), m_cursor(0) {}
 
     protected:
-        virtual bool vcanSeek() const { return true; }
-        virtual bool vcanRead() const { return true; }
-        virtual bool vcanWrite() const { return false; }
-        virtual bool vcanZeroCopy() const { return true; }
-        virtual void vflush() {}
-        virtual void vclose() {}
-        virtual u64  vgetLength() const { return m_size; }
-        virtual void vsetLength(u64 length) {}
-        virtual s64  vsetPos(s64 pos)
+        virtual bool v_canSeek() const { return true; }
+        virtual bool v_canRead() const { return true; }
+        virtual bool v_canWrite() const { return false; }
+        virtual bool v_canView() const { return true; }
+        virtual s64  v_view(u8 const*& buffer, s64 count)
+        {
+            if (m_cursor < m_size)
+            {
+                buffer = m_buffer + m_cursor;
+                if ((m_cursor + count) > m_size)
+                {
+                    count = m_size - m_cursor;
+                }
+                m_cursor += count;
+            }
+            else
+            {
+                buffer = nullptr;
+                count  = 0;
+            }
+            return count;
+        }
+        virtual void v_flush() {}
+        virtual void v_close() {}
+        virtual u64  v_getLength() const { return m_size; }
+        virtual void v_setLength(u64 length) {}
+        virtual s64  v_setPos(s64 pos)
         {
             m_cursor = pos;
             return m_cursor;
         }
-        virtual s64 vgetPos() const { return m_cursor; }
-        virtual s64 vread(u8* buffer, s64 count)
+        virtual s64 v_getPos() const { return m_cursor; }
+        virtual s64 v_read(u8* buffer, s64 count)
         {
             s64 i = 0;
             while (i < count && m_cursor < m_size)
@@ -43,7 +61,7 @@ namespace ncore
             return i;
         }
 
-        virtual s64 vread0(u8 const*& buffer, s64 count)
+        virtual s64 v_read0(u8 const*& buffer, s64 count)
         {
             if (m_cursor < m_size)
             {
@@ -62,7 +80,7 @@ namespace ncore
             return count;
         }
 
-        virtual s64 vwrite(const u8* buffer, s64 count) { return -1; }
+        virtual s64 v_write(const u8* buffer, s64 count) { return -1; }
     };
 } // namespace ncore
 
@@ -80,11 +98,11 @@ UNITTEST_SUITE_BEGIN(test_text_stream)
             mem_stream    memtext(read_text_txt, read_text_txt_len);
             text_stream_t text(&memtext, text_stream_t::encoding_ascii);
 
-            crunes_t thisstr("this ");
+            crunes_t thisstr = make_crunes("this ");
             crunes_t line;
             while (text.readLine(line))
             {
-                CHECK_TRUE(starts_with(line, thisstr));
+                CHECK_TRUE(nrunes::starts_with(line, thisstr));
             }
 
             text.close();

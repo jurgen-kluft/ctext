@@ -12,16 +12,16 @@ namespace ncore
     text_stream_t::text_stream_t(istream_t* stream, encoding e) : m_stream(stream), m_stream_len(0), m_stream_pos(0), m_buffer_data(nullptr), m_buffer_data0(nullptr), m_buffer_size(0), m_buffer_text()
     {
         m_buffer_cap = 4096; // Should be somewhere like "average line length" * 10
-        m_buffer_text.set_type((u8)e);
+        m_buffer_text.m_type = (u8)e;
     }
 
     static u32 find_eol(crunes_t& text)
     {
         u32     cursor = 0;
-        uchar32 c      = text.read(cursor);
+        uchar32 c      = nrunes::read(text, cursor);
         while (c != cEOL && c != cEOF && c != cEOS)
         {
-            c = text.read(cursor);
+            c = nrunes::read(text, cursor);
         }
         return cursor;
     }
@@ -142,13 +142,13 @@ namespace ncore
         return true;
     }
 
-    bool text_stream_t::vcanSeek() const { return false; }
-    bool text_stream_t::vcanRead() const { return m_stream->canRead(); }
-    bool text_stream_t::vcanWrite() const { return m_stream->canWrite(); }
-    bool text_stream_t::vcanView() const { return m_stream->canView(); }
-    void text_stream_t::vflush() { m_stream->flush(); }
+    bool text_stream_t::v_canSeek() const { return false; }
+    bool text_stream_t::v_canRead() const { return m_stream->canRead(); }
+    bool text_stream_t::v_canWrite() const { return m_stream->canWrite(); }
+    bool text_stream_t::v_canView() const { return m_stream->canView(); }
+    void text_stream_t::v_flush() { m_stream->flush(); }
 
-    void text_stream_t::vclose()
+    void text_stream_t::v_close()
     {
         if (m_buffer_data != nullptr)
         {
@@ -165,19 +165,19 @@ namespace ncore
         m_stream->close();
     }
 
-    u64  text_stream_t::vgetLength() const { return m_stream->getLength(); }
-    void text_stream_t::vsetLength(u64 length) { m_stream->setLength(length); }
+    u64  text_stream_t::v_getLength() const { return m_stream->getLength(); }
+    void text_stream_t::v_setLength(u64 length) { m_stream->setLength(length); }
 
-    s64 text_stream_t::vsetPos(s64 pos)
+    s64 text_stream_t::v_setPos(s64 pos)
     {
         if (canSeek())
             return m_stream->setPos(pos);
         return -1;
     }
 
-    s64 text_stream_t::vgetPos() const { return m_stream->getPos(); }
-    s64 text_stream_t::vread(u8* buffer, s64 count) { return m_stream->read(buffer, count); }
-    s64 text_stream_t::vview(u8 const*& buffer, s64 count) { return m_stream->view(buffer, count); }
-    s64 text_stream_t::vwrite(const u8* buffer, s64 count) { return m_stream->write(buffer, count); }
+    s64 text_stream_t::v_getPos() const { return m_stream->getPos(); }
+    s64 text_stream_t::v_read(u8* buffer, s64 count) { return m_stream->read(buffer, count); }
+    s64 text_stream_t::v_view(u8 const*& buffer, s64 count) { return m_stream->view(buffer, count); }
+    s64 text_stream_t::v_write(const u8* buffer, s64 count) { return m_stream->write(buffer, count); }
 
 } // namespace ncore
