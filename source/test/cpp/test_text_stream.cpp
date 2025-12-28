@@ -98,7 +98,7 @@ UNITTEST_SUITE_BEGIN(test_text_stream)
             mem_stream    memtext(read_text_txt, read_text_txt_len);
             text_stream_t text(&memtext, text_stream_t::encoding_ascii);
 
-            crunes_t thisstr = make_crunes("this ");
+            crunes_t thisstr = ascii::make_crunes("this ");
             crunes_t line;
             while (text.readLine(line))
             {
